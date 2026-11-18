@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": false,
+    "allowImportingTsExtensions": false,
+    "outDir": ".test-dist",
+    "rootDir": "."
+  },
+  "include": ["src/workflows.ts", "src/mockData.ts", "tests/workflows.test.ts"]
+}

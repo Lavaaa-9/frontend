@@ -1,0 +1,103 @@
+/* Spartial Specialized Polyclinic - theme adapted from the supplied clinic logo.
+   Blue is the primary interaction color. Green is reserved for success,
+   red for warning/urgent actions and small brand accents. Text/status labels
+   must remain visible without relying on color alone. */
+:root {
+  --primary: #003DB8;
+  --primary-dark: #002F91;
+  --brand-blue: #003DB8;
+  --brand-blue-light: #EAF1FF;
+  --brand-red: #E50012;
+  --brand-red-light: #FFF0F1;
+  --brand-green: #00872A;
+  --brand-green-light: #EAF8EE;
+  --ink: #1D2D4A;
+  --muted: #66758B;
+  --surface: #FFFFFF;
+  --border: #E5EBF5;
+  --shadow: 0 12px 35px rgba(0, 40, 117, 0.045);
+}
+body, .app-shell { background-color: #F6F8FC; }
+button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible {
+  outline: 3px solid rgba(0,61,184,.30);
+  outline-offset: 3px;
+}
+/* Clinic logo replaces the temporary generic heart icon/wordmark. */
+.brand-official { gap: 0; max-width: 100%; }
+.brand-official .brand-image {
+  display: block;
+  width: 199px;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+.sidebar-brand { padding: 20px 23px 19px; }
+.brand-compact .brand-image { width: 174px; }
+.login-illustration > .brand .brand-image { width: 225px; }
+.login-mobile-brand .brand-image { width: 195px; }
+/* Brand hierarchy: primary blue, supporting green, restrained red. */
+.login-illustration {
+  background: linear-gradient(145deg, #F1F5FF 0%, #FCFDFF 66%, #FFF4F5 100%);
+}
+.login-illustration::after {
+  border-color: rgba(0,61,184,.10);
+  box-shadow: 0 0 0 90px rgba(0,61,184,.018), 0 0 0 180px rgba(229,0,18,.012);
+}
+.intro-tag { border-color: #DBE6FF; color: var(--brand-blue); }
+.intro-dot { background: var(--brand-green); }
+.login-promo h1, .login-form-card h2, .main-heading h1 { color: var(--ink); }
+.login-promo h1 em { color: var(--brand-blue); }
+.login-mini-card { border-color: #E0E9F9; }
+.login-icon, .login-intro-icon { color: var(--brand-blue); background: var(--brand-blue-light); }
+.login-mini-card > svg { color: var(--brand-green); }
+.eyebrow { color: var(--brand-blue); }
+.field input:focus, .field select:focus {
+  border-color: var(--brand-blue);
+  box-shadow: 0 0 0 3px rgba(0,61,184,.12);
+}
+.button.primary { background: var(--brand-blue); color: #FFF; box-shadow: 0 7px 18px rgba(0,61,184,.17); }
+.button.primary:hover { background: var(--primary-dark); }
+.button.outline:hover { border-color: #A8BCE5; color: var(--brand-blue); }
+.preview-info svg { color: var(--brand-blue); }
+.sidebar { border-right-color: var(--border); }
+.workspace-caption { background: #F7F9FF; border-color: #E6EDF9; }
+.work-icon { background: var(--brand-blue-light); color: var(--brand-blue); }
+.nav-link:hover { background: #F2F6FF; color: var(--brand-blue); }
+.nav-link-active, .nav-link-active:hover { background: var(--brand-blue-light); color: var(--brand-blue); }
+.nav-link-active svg { color: var(--brand-blue); }
+.nav-link-active::before { background: var(--brand-red); }
+.nav-count { background: var(--brand-blue-light); color: var(--brand-blue); }
+.support-mini { background: var(--brand-green-light); }
+.support-icon, .support-mini b { color: var(--brand-green); }
+.topbar { border-bottom-color: var(--border); }
+.global-search { background: #F6F8FC; }
+.hero { background: linear-gradient(110deg, #002B87 0%, #003DB8 58%, #145BD0 100%); box-shadow: 0 16px 32px rgba(0,45,135,.16); }
+.hero::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--brand-red); z-index: 3; }
+.stat-teal { background: var(--brand-blue-light); color: var(--brand-blue); }
+.stat-blue { background: var(--brand-blue-light); color: var(--brand-blue); }
+.stat-indigo { background: var(--brand-red-light); color: var(--brand-red); }
+.avatar-mint { background: var(--brand-green-light); color: var(--brand-green); }
+.avatar-blue { background: var(--brand-blue-light); color: var(--brand-blue); }
+.progress-teal { background: var(--brand-blue); }
+.progress-green { background: var(--brand-green); }
+.progress-blue { background: #5281D6; }
+.queue-mini-active, .queue-mini:hover { border-color: #95B5EF; background: #F2F6FF; }
+.subtle-link { background: #EFF4FF; color: var(--brand-blue); }
+.subtle-link:hover { background: #E2EBFC; }
+.module-banner { background: linear-gradient(112deg, #002F91, #145BD0); }
+.workflow-steps li span { background: var(--brand-blue-light); color: var(--brand-blue); }
+.notice-illustration { background: var(--brand-blue-light); color: var(--brand-blue); }
+.mini-requirement svg { color: var(--brand-green); }
+.form-notice svg { color: var(--brand-blue); }
+.drawer-no-data { background: #F4F7FF; }
+.drawer-no-data svg { color: var(--brand-blue); }
+.login-signoff { color: #65738B; }
+/* Red should remain visible on error/danger, green on positive outcomes.
+   Existing text labels and iconography are preserved for accessibility. */
+@media (max-width: 1050px) { .brand-official .brand-image { width: 176px; } }
+@media (max-width: 760px) {
+  .sidebar-brand { padding: 18px 19px; }
+  .sidebar .brand-image { width: 199px; }
+  .login-illustration .brand { display: none; }
+  .login-mobile-brand .brand-image { width: 205px; }
+}
