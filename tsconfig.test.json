@@ -8,5 +8,5 @@
     "outDir": ".test-dist",
     "rootDir": "."
   },
-  "include": ["src/workflows.ts", "src/mockData.ts", "tests/workflows.test.ts"]
+  "include": ["src/workflows.ts", "src/mockData.ts", "src/demo/operations.ts", "src/app/routing.ts", "src/api/client.ts", "src/api/types.ts", "src/validation.ts", "tests/*.test.ts"]
 }

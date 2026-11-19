@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.test-dist/
+.qa-browser/
+.reference/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+.DS_Store

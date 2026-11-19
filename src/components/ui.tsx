@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { AlertCircle, LockKeyhole, Search, X } from 'lucide-react'
 import { ApiError } from '../api/client'
@@ -39,13 +39,29 @@ export function Modal({ title, subtitle, children, close }: { title: string; sub
     <button type="button" className="icon-button" aria-label={`Close ${title}`} onClick={close}><X size={20}/></button>
   </div>{children}</Dialog>
 }
-export function ConfirmDialog({ title, description, confirmLabel, close, confirm, busy = false, error }: {
-  title: string; description: string; confirmLabel: string; close: () => void; confirm: () => void; busy?: boolean; error?: unknown
+export function ConfirmDialog({ title, description, confirmLabel, close, confirm, busy = false, error, tone = 'danger' }: {
+  title: string; description: string; confirmLabel: string; close: () => void; confirm: () => void; busy?: boolean; error?: unknown; tone?: string
 }) {
   return <Modal title={title} subtitle="Please review this change" close={()=>{if(!busy)close()}}><div className="modal-form">
     <p>{description}</p><ErrorNotice error={error}/><div className="form-actions"><button data-initial-focus disabled={busy} className="button outline" onClick={close}>Keep unchanged</button>
-      <button disabled={busy} className="button danger" onClick={confirm}>{busy?'Saving…':confirmLabel}</button></div>
+      <button disabled={busy} className={`button ${tone==='danger'?'danger':'primary'}`} onClick={confirm}>{busy?'Saving…':confirmLabel}</button></div>
   </div></Modal>
+}
+
+export type PreviewState = 'ready' | 'loading' | 'empty' | 'error' | 'denied'
+export function PreviewNotice() {
+  return <div className="preview-banner"><AlertCircle size={18}/><span><b>Demo Mode.</b> Fictional records only. Changes stay in memory and reset on refresh. Role restrictions demonstrate UI behaviour; they are not backend security.</span></div>
+}
+export function BlankState({ title, description }: {title:string;description:string}) {return <EmptyState title={title} description={description}/>}
+export function StatePreviewControl({ value, change }: {value:PreviewState;change:(state:PreviewState)=>void}) {
+  return <div className="state-preview-control"><label htmlFor="state-preview">Screen state preview</label><select id="state-preview" value={value} onChange={e=>change(e.target.value as PreviewState)}><option value="ready">Ready</option><option value="loading">Loading</option><option value="empty">Empty</option><option value="error">Failure</option><option value="denied">Access denied</option></select></div>
+}
+export function ScreenState({ state, reset, children }: {state:PreviewState;reset:()=>void;children:ReactNode}) {
+  if(state==='ready')return children
+  if(state==='loading')return <section className="surface-card state-card" aria-busy="true"><h2>Loading preview</h2><p role="status">Loading fictional records…</p><div className="skeleton"/><div className="skeleton"/><button className="button outline" onClick={reset}>Return to records</button></section>
+  if(state==='denied')return <section className="surface-card state-card"><LockKeyhole size={30}/><h2>Access unavailable</h2><p>This role does not have access to this page.</p><button className="button outline" onClick={reset}>Return to workspace</button></section>
+  if(state==='empty')return <section className="surface-card state-card"><EmptyState title="No records to display" description="This is the empty state design. Return to Ready to view the demo records."/><button className="button outline" onClick={reset}>Return to records</button></section>
+  return <section className="surface-card state-card"><AlertCircle size={30}/><h2>Unable to load records</h2><p>This is a simulated failure. No records were changed.</p><button className="button primary" onClick={reset}>Try again</button></section>
 }
 export function FormField({ id, label, hint, error, children }: { id: string; label: string; hint?: string; error?: string; children: ReactNode }) {
   return <div className="field"><label htmlFor={id}>{label}</label>{children}
@@ -59,11 +75,13 @@ export function Status({ value }: { value: string }) {
 export function DataTable<T>({ caption, columns, rows, rowKey }: {
   caption: string; columns: { id: string; label: string; render: (row: T) => ReactNode }[]; rows: T[]; rowKey: (row: T) => string
 }) {
-  return <div className="table-scroll" role="region" aria-label={`${caption} — scroll horizontally on small screens`} tabIndex={0}>
+  const [page,setPage]=useState(0)
+  const size=10,last=Math.max(0,Math.ceil(rows.length/size)-1),current=Math.min(page,last)
+  return <><div className="table-scroll" role="region" aria-label={`${caption} — scroll horizontally on small screens`} tabIndex={0}>
     <table className="data-table"><caption className="sr-only">{caption}</caption><thead><tr>{columns.map(column=><th scope="col" key={column.id}>{column.label}</th>)}</tr></thead>
-      <tbody>{rows.map(row=><tr key={rowKey(row)}>{columns.map(column=><td key={column.id}>{column.render(row)}</td>)}</tr>)}</tbody>
+      <tbody>{rows.slice(current*size,(current+1)*size).map(row=><tr key={rowKey(row)}>{columns.map(column=><td key={column.id}>{column.render(row)}</td>)}</tr>)}</tbody>
     </table>
-  </div>
+  </div>{rows.length>size&&<div className="table-footer"><span aria-live="polite">Page {current+1} of {last+1}</span><div className="page-actions"><button className="button outline" disabled={current===0} onClick={()=>setPage(current-1)}>Previous</button><button className="button outline" disabled={current===last} onClick={()=>setPage(current+1)}>Next</button></div></div>}</>
 }
 export function PageHeader({ title, eyebrow, description, action }: { title: string; eyebrow: string; description: string; action?: ReactNode }) {
   return <div className="main-heading"><div><div className="page-eyebrow">{eyebrow}</div><h1>{title}</h1><p>{description}</p></div>{action}</div>

@@ -1,0 +1,58 @@
+import { useState } from 'react'
+import type { FormEvent } from 'react'
+import type { Patient, QueueEntry, Role } from '../mockData'
+import type { Consultation, Operations, Triage } from '../demo/operations'
+import { canUseClinical, saveConsultation } from '../demo/operations'
+import { ConfirmDialog, DataTable, EmptyState, ErrorNotice, FormField, PageHeader, Status } from '../components/ui'
+
+export type ChangeOperations=(update:(state:Operations)=>Operations,action:string,resource:string)=>void
+export interface ClinicalProps {role:Role;queue:QueueEntry[];patients:Patient[];operations:Operations;change:ChangeOperations;advance:(id:string)=>void}
+export function Clinical({kind,...props}:ClinicalProps&{kind:'triage'|'consultations'}) {
+  const clinicalKind=kind==='triage'?'triage':'consultation',editable=canUseClinical(props.role,clinicalKind)
+  const available=props.queue.filter(q=>kind==='triage'?['Waiting','Triage'].includes(q.stage):q.stage==='Consultation')
+  const [selected,setSelected]=useState('')
+  const visit=available.find(q=>q.encounterId===selected)
+  const records:{visitId:string;complete:boolean}[]=kind==='triage'?props.operations.triage:props.operations.consultations
+  return <><PageHeader title={kind==='triage'?'Nursing & triage':'Doctor consultations'} eyebrow="CLINICAL DESIGN PREVIEW" description="Synthetic draft forms. Sample fields and handoffs require clinic approval."/>
+    <div className="core-grid"><section className="surface-card core-card"><h2>{editable?'Select a demo visit':'Visit overview'}</h2><FormField id="clinical-visit" label="Patient / visit"><select id="clinical-visit" value={selected} onChange={e=>setSelected(e.target.value)}><option value="">Choose an active visit</option>{available.map(q=><option value={q.encounterId} key={q.id}>{q.patientName} · {q.encounterId} · {q.stage}</option>)}</select></FormField>
+    {!available.length&&<EmptyState title="No visits at this stage" description="Check in a fictional patient and move the visit through the queue."/>}
+    {visit&&<><p className="notice">{visit.patientName} · {visit.patientId} · {visit.encounterId}</p>{!editable?<p>This role can review the workspace but cannot save this assessment.</p>:kind==='triage'?visit.stage==='Waiting'?<button className="button primary" onClick={()=>props.advance(visit.id)}>Start demo triage</button>:<TriageForm key={visit.encounterId} visit={visit} {...props}/>:<ConsultationForm key={visit.encounterId} visit={visit} {...props}/>}</>}
+    </section><section className="surface-card core-card"><h2>Assessment history</h2>{records.length?<DataTable caption="Synthetic assessment history" rows={records} rowKey={r=>r.visitId} columns={[{id:'visit',label:'Visit',render:r=>r.visitId},{id:'status',label:'Status',render:r=><Status value={r.complete?'Completed':'Draft'}/>}]}/>:<EmptyState title="No assessments saved" description="Saved drafts and completed demo assessments appear here."/>}
+      {visit&&kind==='consultations'&&<><h3>Triage findings</h3><p>{props.operations.triage.find(t=>t.visitId===visit.encounterId)?.notes||'No demo triage observations recorded.'}</p><h3>Completed lab results</h3>{props.operations.labs.filter(r=>r.visitId===visit.encounterId&&r.status==='Completed').map(r=><p key={r.id}><strong>{r.test}</strong>: {r.result}</p>)}</>}
+    </section></div></>
+}
+function TriageForm({visit,operations,change,advance}:ClinicalProps&{visit:QueueEntry}) {
+  const [draft,setDraft]=useState<Triage>(()=>operations.triage.find(t=>t.visitId===visit.encounterId)||{visitId:visit.encounterId,temperature:'',pulse:'',pressure:'',notes:'',complete:false})
+  const [confirm,setConfirm]=useState(false),[error,setError]=useState<unknown>(null)
+  const field=(name:keyof Triage,value:string)=>setDraft(prev=>({...prev,[name]:value}))
+  function save(complete:boolean){if(complete&&!draft.notes.trim()){setError(new Error('Enter sample observations before forwarding the visit.'));return}change(state=>({...state,triage:[...state.triage.filter(t=>t.visitId!==visit.encounterId),{...draft,complete}]}),complete?'Demo triage completed':'Demo triage draft saved',visit.encounterId);setDraft({...draft,complete});if(complete)advance(visit.id);setConfirm(false)}
+  return <form className="auth-form" onSubmit={e=>{e.preventDefault();save(false)}}><ErrorNotice error={error}/><div className="field-row"><FormField id="triage-temperature" label="Temperature (°C, optional)"><input id="triage-temperature" type="number" step="0.1" value={draft.temperature} onChange={e=>field('temperature',e.target.value)}/></FormField><FormField id="triage-pulse" label="Pulse (bpm, optional)"><input id="triage-pulse" type="number" step="1" value={draft.pulse} onChange={e=>field('pulse',e.target.value)}/></FormField></div>
+    <FormField id="triage-pressure" label="Blood pressure (optional)"><input id="triage-pressure" maxLength={30} value={draft.pressure} onChange={e=>field('pressure',e.target.value)}/></FormField><FormField id="triage-notes" label="Nursing observations"><textarea id="triage-notes" maxLength={3000} value={draft.notes} onChange={e=>field('notes',e.target.value)} rows={4}/></FormField><div className="page-actions"><button className="button outline">Save demo draft</button><button className="button primary" type="button" onClick={()=>setConfirm(true)}>Complete & forward</button></div>
+    {confirm&&<ConfirmDialog tone="primary" title="Complete demo triage?" description={`Save this sample assessment against ${visit.encounterId} and move the visit to consultation?`} confirmLabel="Complete triage" close={()=>setConfirm(false)} confirm={()=>save(true)}/>}
+  </form>
+}
+function ConsultationForm({visit,role,operations,change,advance}:ClinicalProps&{visit:QueueEntry}) {
+  const [draft,setDraft]=useState<Consultation>(()=>operations.consultations.find(c=>c.visitId===visit.encounterId)||{visitId:visit.encounterId,symptoms:'',diagnosis:'',icd:'',plan:'',prescription:'',lab:'',followUp:'',complete:false})
+  const [confirm,setConfirm]=useState(false),[error,setError]=useState<unknown>(null)
+  function save(complete:boolean){try{const record={...draft,complete};saveConsultation(operations,record,visit,role);change(state=>saveConsultation(state,record,visit,role),complete?'Demo consultation completed':'Demo consultation draft saved',visit.encounterId);setDraft(record);if(complete)advance(visit.id);setConfirm(false);setError(null)}catch(reason){setError(reason)}}
+  const fields:[keyof Consultation,string][]=[['symptoms','Symptoms / observations'],['diagnosis','Diagnosis (sample free text)'],['icd','ICD-10 code (optional, unvalidated)'],['plan','Treatment plan'],['prescription','Prescription request (sample instructions)'],['lab','Laboratory request (sample investigation)'],['followUp','Follow-up instructions']]
+  return <form className="auth-form" onSubmit={e=>{e.preventDefault();save(false)}}><ErrorNotice error={error}/>{fields.map(([name,label])=><FormField key={name} id={`consult-${name}`} label={label}><textarea id={`consult-${name}`} rows={name==='icd'?1:3} maxLength={3000} value={String(draft[name])} onChange={e=>setDraft(prev=>({...prev,[name]:e.target.value}))}/></FormField>)}<p className="field-hint">No diagnostic suggestions, dose calculations or code validation are performed. Completing creates the entered synthetic lab and prescription requests.</p><div className="page-actions"><button className="button outline">Save demo draft</button><button className="button primary" type="button" onClick={()=>setConfirm(true)}>Complete consultation</button></div>
+    {confirm&&<ConfirmDialog tone="primary" title="Complete demo consultation?" description={`Save the sample consultation and its requests for ${visit.encounterId}, then complete the visit?`} confirmLabel="Complete consultation" close={()=>setConfirm(false)} confirm={()=>save(true)}/>}
+  </form>
+}
+export function Requests({kind,role,operations,patients,change}:{kind:'laboratory'|'pharmacy';role:Role;operations:Operations;patients:Patient[];change:ChangeOperations}) {
+  const [filter,setFilter]=useState('All'),[query,setQuery]=useState(''),[selected,setSelected]=useState(''),[error,setError]=useState<unknown>(null),[pending,setPending]=useState(false)
+  const rows=(kind==='laboratory'?operations.labs:operations.prescriptions).filter(r=>(filter==='All'||r.status===filter)&&(`${r.id} ${patients.find(p=>p.id===r.patientId)?.name||''}`).toLowerCase().includes(query.toLowerCase()))
+  const request=(kind==='laboratory'?operations.labs:operations.prescriptions).find(r=>r.id===selected)
+  const [result,setResult]=useState('')
+  const editable=canUseClinical(role,kind)
+  function complete(){if(kind==='laboratory'&&!result.trim()){setError(new Error('Enter a fictional result.'));setPending(false);return}change(state=>kind==='laboratory'?{...state,labs:state.labs.map(r=>r.id===selected?{...r,result:result.trim(),status:'Completed'}:r)}:{...state,prescriptions:state.prescriptions.map(r=>r.id===selected?{...r,status:'Dispensed'}:r)},kind==='laboratory'?'Demo result recorded':'Demo dispensing recorded',selected);setPending(false);setError(null)}
+  function submit(event:FormEvent){event.preventDefault();setPending(true)}
+  return <><PageHeader title={kind==='laboratory'?'Laboratory requests':'Pharmacy requests'} eyebrow="CLINICAL DESIGN PREVIEW" description="Fictional requests from completed demo consultations. No live stock, specimens or medical verification."/>
+    <section className="surface-card core-card"><div className="list-controls"><FormField id="request-search" label="Search requests"><input id="request-search" value={query} onChange={e=>setQuery(e.target.value)}/></FormField><FormField id="request-status" label="Status"><select id="request-status" value={filter} onChange={e=>setFilter(e.target.value)}>{['All','Pending',kind==='laboratory'?'Completed':'Dispensed'].map(s=><option key={s}>{s}</option>)}</select></FormField></div>
+    {rows.length?<DataTable caption="Synthetic requests" rows={rows} rowKey={r=>r.id} columns={[{id:'id',label:'Request',render:r=>r.id},{id:'patient',label:'Patient',render:r=>patients.find(p=>p.id===r.patientId)?.name||r.patientId},{id:'status',label:'Status',render:r=><Status value={r.status}/>},{id:'view',label:'Details',render:r=><button className="table-action" onClick={()=>{setSelected(r.id);setResult('result' in r?r.result:'');setError(null)}}>Open request</button>}]}/>:<EmptyState title="No matching requests" description="Complete a demo consultation with a laboratory or prescription request to create one."/>}
+    </section>{request&&<section className="surface-card core-card"><h2>{request.id}</h2><p>{'test' in request?request.test:request.instructions}</p><p>Visit: {request.visitId}</p><ErrorNotice error={error}/>{editable&&request.status==='Pending'?<form className="auth-form" onSubmit={submit}>{kind==='laboratory'&&<FormField id="lab-result" label="Fictional result (required)"><textarea id="lab-result" required maxLength={3000} value={result} onChange={e=>setResult(e.target.value)}/></FormField>}<button className="button primary">{kind==='laboratory'?'Save demo result':'Record demo dispensing'}</button></form>:<p>{'result' in request?request.result||'Result pending.':`Status: ${request.status}`}</p>}
+      <button className="button outline" onClick={()=>setSelected('')}>Close details</button></section>}
+    {pending&&<ConfirmDialog tone="primary" title={kind==='laboratory'?'Save fictional result?':'Record simulated dispensing?'} description="This updates only the synthetic workflow. It does not verify a medical result or change real stock." confirmLabel="Confirm demo action" close={()=>setPending(false)} confirm={complete}/>}
+  </>
+}

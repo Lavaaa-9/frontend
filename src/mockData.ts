@@ -1,7 +1,7 @@
 import { clinicDate } from './workflows.js'
 /** Fictional UI fixtures only. Do not use real patient records in development. */
 const demoDate = clinicDate()
-export type Role = 'Administrator' | 'Reception' | 'Nurse' | 'Doctor' | 'Laboratory' | 'Cashier'
+export type Role = 'Administrator' | 'Reception' | 'Nurse' | 'Doctor' | 'Laboratory' | 'Pharmacy' | 'Cashier' | 'Management'
 export type PatientStatus = 'Active' | 'Follow-up' | 'New'
 export interface Patient {
   id: string
@@ -12,6 +12,10 @@ export interface Patient {
   status: PatientStatus
   initials: string
   avatar: string
+  phone?: string
+  address?: string
+  nextOfKin?: string
+  history?: string
 }
 export interface Appointment {
   id: string
@@ -19,6 +23,7 @@ export interface Appointment {
   patientName: string
   reason: string
   provider: string
+  department?: string
   time: string
   date: string
   status: 'Confirmed' | 'Waiting' | 'Completed' | 'Cancelled'

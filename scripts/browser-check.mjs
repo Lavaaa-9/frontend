@@ -7,6 +7,8 @@ import path from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
 
 const url = process.argv[2] ?? 'http://127.0.0.1:5173'
+const landingOnly = process.argv.includes('--landing-only')
+const reportPath = landingOnly ? 'docs/landing-check-results.json' : 'docs/browser-check-results.json'
 assert.ok(['127.0.0.1', 'localhost'].includes(new URL(url).hostname), 'Only a local synthetic-data preview may be tested')
 const browserPath = process.env.SPARTIAL_BROWSER ?? [
   'C:/Program Files/Google/Chrome/Application/chrome.exe',
@@ -22,6 +24,7 @@ let page, control
 const checks = []
 const errors = []
 const externalRequests = new Set()
+const apiRequests = []
 
 async function waitFor(check, label, timeout = 12000) {
   const deadline = Date.now() + timeout
@@ -83,7 +86,7 @@ async function click(selector, text) {
 async function fill(selector, value) {
   await evaluate(`(() => {
     const element = document.querySelector(${JSON.stringify(selector)})
-    const prototype = element.tagName === 'SELECT' ? HTMLSelectElement.prototype : HTMLInputElement.prototype
+    const prototype = element.tagName === 'SELECT' ? HTMLSelectElement.prototype : element.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype
     Object.getOwnPropertyDescriptor(prototype, 'value').set.call(element, ${JSON.stringify(value)})
     element.dispatchEvent(new Event(element.tagName === 'SELECT' ? 'change' : 'input', {bubbles:true}))
   })()`)
@@ -126,9 +129,47 @@ try {
   page.on('Runtime.consoleAPICalled', event => { if (event.type === 'error') errors.push(event.args.map(arg=>arg.value ?? arg.description).join(' ')) })
   page.on('Network.requestWillBeSent', event => {
     if (/^https?:/.test(event.request.url) && !['localhost', '127.0.0.1'].includes(new URL(event.request.url).hostname)) externalRequests.add(event.request.url)
+    if (/^https?:/.test(event.request.url) && new URL(event.request.url).pathname.startsWith('/api/')) apiRequests.push(new URL(event.request.url).pathname)
   })
   await viewport(1440)
+  mkdirSync('docs/screenshots', { recursive: true })
   await page.call('Page.navigate', { url })
+  await waitFor(() => evaluate('!!document.querySelector(".terminal-grid")'), 'terminal landing page')
+  await expect('document.querySelectorAll(".terminal-card").length===11', 'Landing page includes all 11 reference terminals')
+  await expect('document.title.includes("Terminal Landing Page")', 'Landing page has its own document title')
+  await expect('getComputedStyle(document.querySelector(".terminal-grid")).gridTemplateColumns.split(/\\s+/).length===3','Desktop landing page uses three columns')
+  await expect('document.querySelectorAll(".terminal-card:nth-child(3n + 2) .terminal-photo").length===4','Every middle-column card retains the alternating photo layout')
+  await expect('new Promise(resolve=>{const img=new Image();img.onload=()=>resolve(true);img.onerror=()=>resolve(false);img.src="/terminal-images/healthcare-atlas.png"})','Fictional terminal imagery loads from the local app')
+  await screenshot('terminal-landing-desktop')
+  for(const width of [320,390,768,1024,1440]){
+    await viewport(width,width<600?844:1000)
+    await expect('document.documentElement.scrollWidth<=innerWidth',`Terminal landing page fits ${width}px`)
+    await expect(`getComputedStyle(document.querySelector(".terminal-grid")).gridTemplateColumns.split(/\\s+/).length===${width<=600?1:width<=900?2:3}`,`Terminal grid responds at ${width}px`)
+    if(width===390)await screenshot('terminal-landing-mobile')
+  }
+  for(const id of ['radiology','theatre','dialysis','physiotherapy','ipd']){
+    await click(`[data-terminal-id="${id}"] button`)
+    await expect('document.querySelector("dialog[open]").textContent.includes("Workflow not yet implemented")',`${id} opens an honest design-pending state`)
+    await expect('document.querySelector("dialog[open]").contains(document.activeElement)',`${id} design dialog receives keyboard focus`)
+    await key('Escape')
+    await expect(`document.activeElement.closest('[data-terminal-id="${id}"]')!==null`,`${id} dialog restores its trigger focus`)
+  }
+  for(const [id,roleName,title] of [['back-office','Administrator','Staff & permissions'],['reception','Reception','Patients'],['doctor','Doctor','Doctor consultations'],['laboratory','Laboratory','Laboratory requests'],['nurse','Nurse','Nursing & triage'],['pharmacy','Pharmacy','Pharmacy requests']]){
+    await click(`[data-terminal-id="${id}"] button`)
+    await waitFor(()=>evaluate('!!document.querySelector("#preview-role")'),`${id} login`)
+    await expect(`document.querySelector('#preview-role').value===${JSON.stringify(roleName)}`,`${id} preselects the relevant demo role without signing in`)
+    await click('.login-submit')
+    await expect(`document.querySelector('main h1').textContent.includes(${JSON.stringify(title)})`,`${id} enters the existing module after demo confirmation`)
+    await click('.topbar button','Terminals')
+    await expect('!!document.querySelector(".terminal-grid")','Workspace can return to the landing page')
+    await expect('document.title.includes("Terminal Landing Page")','Returning from a workspace restores the landing title')
+  }
+  await click('.terminal-sign-in')
+  await expect('!!document.querySelector("#preview-role")','Staff sign in opens the existing login flow')
+  await click('.terminal-back')
+  await expect('!!document.querySelector(".terminal-grid")','Login can return to all terminals')
+  if(!landingOnly){
+  await page.call('Page.navigate', { url: `${url.split('#')[0]}#/dashboard` })
   await waitFor(() => evaluate('!!document.querySelector("#preview-role")'), 'login design')
   mkdirSync('docs/screenshots', { recursive: true })
   await screenshot('staff-login-desktop')
@@ -220,13 +261,13 @@ try {
   }
   await role('Cashier')
   await expect('![...document.querySelectorAll("button")].some(el=>el.textContent.includes("Register patient") || el.textContent.includes("Book appointment"))', 'Cashier dashboard hides registration and booking actions')
-  await navigate('Patients')
-  await click('[aria-label="View patient Amina M."]')
-  await expect('!document.querySelector("dialog .button.primary")', 'Cashier patient drawer hides booking actions')
-  await key('Escape')
+  await expect('![...document.querySelectorAll("nav button")].some(el=>el.textContent.includes("Patients"))','Cashier navigation hides patient records')
+  await evaluate('location.hash="/patients"')
+  await delay(150)
+  await expect('document.body.textContent.includes("Access unavailable") && !document.querySelector("tbody")','Direct patient route displays access denial for cashier preview')
   await role('Administrator')
   await navigate('Nurse Triage')
-  await expect('document.body.textContent.includes("UI blueprint · Not implemented")', 'Clinical modules remain clearly labeled as design-only')
+  await expect('document.body.textContent.includes("CLINICAL DESIGN PREVIEW")', 'Clinical modules remain clearly labeled as design-only')
   await role('Reception')
   for (const width of [320, 390, 768, 1024, 1440]) {
     if (await evaluate('!!document.querySelector(".toast button")')) await click('[aria-label="Dismiss message"]')
@@ -324,15 +365,95 @@ try {
   await click('.login-submit')
   await navigate('Patient Queue')
   await expect('document.querySelectorAll("tbody tr").length === 4 && ![...document.querySelectorAll("tbody tr")].some(tr=>tr.textContent.includes("Walk-in"))', 'Reload discards walk-in visits and restores the initial queue fixtures')
+  await role('Nurse')
+  await navigate('Nurse Triage')
+  await fill('#clinical-visit','VIS-1002')
+  await fill('#triage-notes','Fictional nursing observation for automated UI review.')
+  await click('button','Save demo draft')
+  await expect('document.body.textContent.includes("Draft")','Triage draft appears in assessment history')
+  await click('button','Complete & forward')
+  await click('dialog button','Complete triage')
+  await role('Doctor')
+  await navigate('Consultations')
+  await fill('#clinical-visit','VIS-1002')
+  await fill('#consult-symptoms','Fictional symptoms for UI review only')
+  await fill('#consult-plan','Fictional plan for UI review only')
+  await fill('#consult-lab','Sample laboratory investigation')
+  await fill('#consult-prescription','Sample prescription instructions')
+  await click('button','Save demo draft')
+  await navigate('Laboratory')
+  await expect('document.body.textContent.includes("No matching requests")','A consultation draft does not emit laboratory requests')
+  await navigate('Consultations')
+  await fill('#clinical-visit','VIS-1002')
+  await expect('document.querySelector("#consult-plan").value.includes("Fictional plan")','Consultation draft survives navigation within the demo session')
+  await screenshot('consultation-draft-desktop')
+  await click('button','Complete consultation')
+  await click('dialog button','Complete consultation')
+  await role('Laboratory')
+  await navigate('Laboratory')
+  await click('button','Open request')
+  await fill('#lab-result','Fictional result for UI review only')
+  await click('button','Save demo result')
+  await click('dialog button','Confirm demo action')
+  await expect('document.body.textContent.includes("Completed")','Laboratory completion updates the linked request')
+  await role('Pharmacy')
+  await navigate('Pharmacy')
+  await click('button','Open request')
+  await click('button','Record demo dispensing')
+  await click('dialog button','Confirm demo action')
+  await expect('document.body.textContent.includes("Dispensed")','Simulated dispensing updates the linked prescription')
+  await role('Cashier')
+  await navigate('Billing')
+  await click('button','Create demo invoice')
+  await fill('#invoice-patient','SP-00022')
+  await fill('#invoice-description','Fictional consultation service')
+  await fill('#invoice-amount','100.30')
+  await click('dialog button','Create invoice')
+  await click('button','Invoice / receipt')
+  await fill('#invoice-payment','0.10')
+  await click('dialog button','Record simulated payment')
+  await click('dialog button','Record demo payment')
+  await click('button','Invoice / receipt')
+  await expect('document.querySelector(".print-receipt").textContent.includes("100.20")','Billing displays the exact balance after a decimal payment')
+  await key('Escape')
+  await screenshot('billing-demo-desktop')
+  await role('Administrator')
+  await navigate('Settings')
+  await fill('#demo-department','Sample imaging department')
+  await click('button','Add demo department')
+  await expect('document.body.textContent.includes("Sample imaging department")','Demo department creation updates facility settings')
+  await navigate('Staff & Roles')
+  await click('button','Add demo staff')
+  await fill('#demo-staff-name','Fictional QA Staff')
+  await fill('#demo-staff-email','qa@example.invalid')
+  await click('dialog button','Save demo staff')
+  await expect('document.querySelector("tbody").textContent.includes("Fictional QA Staff")','Fictional staff creation updates the table')
+  await evaluate('location.hash="/does-not-exist"')
+  await delay(150)
+  await expect('document.querySelector("h1").textContent.includes("Page not found")','Unknown route renders a 404 state')
+  await evaluate('history.back()')
+  await delay(150)
+  await expect('document.querySelector("h1").textContent.includes("Staff")','Browser Back restores the previous page')
+  for(const width of [390,1024]){
+    await viewport(width,844)
+    for(const title of ['Nurse Triage','Consultations','Laboratory','Pharmacy','Billing','Reports','Staff & Roles','Settings','My Account']){
+      await navigate(title)
+      await expect('document.documentElement.scrollWidth <= innerWidth',`${title} fits ${width}px`)
+      await expect('[...document.querySelectorAll("input,select,textarea")].every(el=>el.getAttribute("aria-label")||el.labels?.length)',`${title} has labelled fields at ${width}px`)
+    }
+  }
+  }
   assert.deepEqual(errors, [], 'No uncaught browser or console errors')
   assert.equal(externalRequests.size, 0, 'No external application requests during the preview')
+  assert.equal(apiRequests.length, 0, 'Demo mode makes no API requests')
   const version = await control.call('Browser.getVersion')
-  const report = { checkedAt: new Date().toISOString(), testedUrl: url, browser: path.basename(browserPath), browserVersion: version.product, checks: checks.length, passed: checks, browserErrors: errors, externalRequestCount: externalRequests.size }
-  writeFileSync('docs/browser-check-results.json', JSON.stringify(report, null, 2) + '\n')
+  const report = { status:'passed', scope:landingOnly?'terminal-landing':'full-demo', checkedAt: new Date().toISOString(), testedUrl: url, browser: path.basename(browserPath), browserVersion: version.product, checks: checks.length, passed: checks, browserErrors: errors, externalRequestCount: externalRequests.size, apiRequestCount:apiRequests.length }
+  writeFileSync(reportPath, JSON.stringify(report, null, 2) + '\n')
   console.log(`PASS: ${checks.length} browser checks; no browser errors or external application requests. Synthetic screenshots saved in docs/screenshots.`)
 } catch (error) {
+  writeFileSync(reportPath,JSON.stringify({status:'failed',scope:landingOnly?'terminal-landing':'full-demo',checkedAt:new Date().toISOString(),testedUrl:url,checks:checks.length,passed:checks,failure:String(error),browserErrors:errors,externalRequestCount:externalRequests.size,apiRequestCount:apiRequests.length},null,2)+'\n')
   if (page) {
-    const diagnostic = await evaluate(`({width:innerWidth, scrollWidth:document.documentElement.scrollWidth, overflowing:[...document.querySelectorAll('body *')].filter(el=>el.getBoundingClientRect().right>innerWidth+1).slice(0,15).map(el=>({tag:el.tagName,className:el.className,right:el.getBoundingClientRect().right}))})`).catch(() => null)
+    const diagnostic = await evaluate(`({route:location.hash,dialogs:[...document.querySelectorAll('dialog[open]')].map(el=>({label:el.getAttribute('aria-label'),text:el.textContent.slice(0,500)})),width:innerWidth, scrollWidth:document.documentElement.scrollWidth, overflowing:[...document.querySelectorAll('body *')].filter(el=>el.getBoundingClientRect().right>innerWidth+1).slice(0,15).map(el=>({tag:el.tagName,className:el.className,right:el.getBoundingClientRect().right}))})`).catch(() => null)
     console.error(JSON.stringify(diagnostic))
   }
   throw error

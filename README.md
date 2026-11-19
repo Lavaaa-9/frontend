@@ -1,96 +1,55 @@
-# Spartial Healthcare Workspace — Web UI Starter
+# Spartial Healthcare Workspace
 
-A responsive **React + TypeScript + Vite** interface design starter for **Spartial Specialized Polyclinic**. Prepared as an initial UI/UX prototype for the team developing the full clinic system.
+React 19, TypeScript and Vite 6 frontend for Spartial Specialized Polyclinic, maintained for Lavaa Tech Solutions. The current assignment is a **synthetic demonstration**, with backend integration deferred. No backend or database was created or modified.
 
-## Brand colors
+## Run in Windows / VS Code
 
-This edition uses the clinic logo supplied by the project owner. The palette is blue `#003DB8` for primary buttons/navigation, red `#E50012` for brand/urgent accents and green `#00872A` for positive states. White and off-white backgrounds keep clinical pages readable. `src/brand-theme.css` contains the overridable theme, and `public/spartial-logo.jpg` is the supplied logo.
-
-## What you can preview now
-
-- Staff preview landing screen (select any demo role and enter interface; **not real authentication**)
-- Responsive desktop/mobile application shell and role-filtered navigation (preview only, **not a security feature**)
-- Dashboard with synthetic statistics, appointments and queue stage overview
-- Patient directory with search, status filter, add-demo-patient form and patient preview drawer
-- Appointments with dated bookings, local duplicate warnings and confirmed cancellation
-- Appointment check-in creates a linked synthetic queue visit (today only)
-- Walk-in check-in creates a synthetic visit for a registered sample patient without creating an appointment
-- Queue with stage filters, provisional role actions and confirmed stage progression
-- Native modal forms, patient drawer and mobile navigation with keyboard focus handling
-- Loading, empty, failure and access-denied designs via the screen-state preview control
-- Navigation-ready blueprint screens for triage, consultations, laboratory, pharmacy, billing, telemedicine, reports, staff and settings
-
-**Important: This is not a clinical application.** All patients are fictional fixtures; changes are in component state and disappear on refresh. No Go API, database, authorization or medical record features are implemented yet. Do not put real patient details in this preview.
-
-## Run on Windows 11 / VS Code
-
-You need Node.js 20.19+ or Node.js 22.12+ for newer Vite releases. Open the extracted folder in VS Code Terminal (PowerShell):
+Use Node.js 22.12 or later (checked with Node 22.19.0 and npm 10.9.3). Open PowerShell in this folder:
 
 ```powershell
 npm ci
 npm run dev
 ```
 
-Open the URL printed by Vite (normally `http://localhost:5173`).
-
-For a production build check:
+Open the address printed by Vite, usually `http://127.0.0.1:5173`. If that port is occupied Vite chooses another port. To check the frontend:
 
 ```powershell
-npm run build
 npm test
+npm run build
+node scripts/browser-check.mjs http://127.0.0.1:5173
 ```
 
-## Where to put it in the main repository
+The browser check requires an installed Chrome or Edge. `SPARTIAL_BROWSER` can point to another Chromium executable. It uses a separate `.qa-browser` profile, closes its own browser, and writes only synthetic screenshots under `docs/screenshots`. The script now records both failed and successful runs in `docs/browser-check-results.json`. It never accepts a remote test target. See [the current QA report](docs/QA_REPORT.md) for actual results and checks still awaiting permission.
 
-```text
-Spartial-Healthcare-System/
-├── AGENTS.md
-├── PHASES.md
-├── backend/                # Planned Go/Gin APIs
-├── web/                    # Copy THIS starter's files here
-├── mobile/                 # Planned patient application
-└── docs/
-    └── UI_UX_BLUEPRINT.md
-```
+## Demonstration workflows
 
-**Note:** If `web/` already contains code, inspect it first and merge changes carefully rather than overwriting it.
+Choose **Demo Mode**, select a fictional staff role and enter the workspace. There is no real sign-in. Change the role preview in the header to follow handoffs. All changes stay in memory and disappear on reload. An administrator preview can restore initial fixtures under Settings → Reset demo data. Exit via the sidebar or My Account.
 
-## Planned frontend/backend boundary
+- Patients: search name/ID/phone, filter, sort, register, edit contacts/next of kin, open a clinic card, review visits, and attach/view/download fictional text documents (100 KB maximum). Medical history editing is limited to the nurse and doctor previews.
+- Appointments: book, choose a sample department/doctor, filter statuses, inspect the day agenda, reschedule, cancel with confirmation and check in today's confirmed visits.
+- Queue: appointment and walk-in visits retain their patient IDs. Duplicate active visits are blocked locally. Nurse and doctor previews move visits through stages.
+- Clinical design previews: nursing observations and consultation drafts are keyed by visit. Completing a consultation creates the entered fictional laboratory and pharmacy requests. Laboratory and pharmacy previews can update their respective request statuses. No diagnosis, prescribing advice, code lookup or stock management is performed.
+- Operations: sample invoices, exact decimal payment simulations, printable demonstration receipts, date-filtered operational summaries and CSV export. These are not financial records or payment processing.
+- Administration: fictional staff accounts, role assignments, departments, facility display name, local activity preview and reset. The activity preview is not a durable audit log. Staff accounts do not authenticate the role selector.
+- Telemedicine: remote appointment schedule and session interface design. No camera, microphone or video connection is started.
+- Account: fictional profile and password-form validation. The demo never claims a password was changed.
 
-- Keep synthetic fixtures only while iterating on UI.
-- At the approved integration milestone, replace fixture state with typed `fetch`/API adapters for Go/Gin.
-- Authentication, authorization, record isolation and audit logging belong in the backend. Role-filtered menus alone are not secure.
-- The AI agent should read the root `AGENTS.md` and `PHASES.md` for overall project rules, but keep project commercial values out of public screenshots and shared UI material.
-- Final clinical labels, fields, role permissions and branding must be confirmed with Spartial's authorized project stakeholders.
+Routes use hashes, for example `#/patients`, `#/patients/SP-00021`, `#/queue`, `#/consultations`, `#/billing` and `#/settings`. Unknown areas display a 404 state; inaccessible areas display a role-preview denial. Subforms remain dialogs or panels; not every detail has a separate URL yet.
 
-See `UI_UX_BLUEPRINT.md` for screen definitions and design system.
+## Data boundary
 
-## Frontend continuation and checks
+`src/demo/repository.ts` owns synthetic state; `src/demo/operations.ts` contains testable clinical and billing operations. The retained reception rules are in `src/workflows.ts`. `src/features` contains the additional demonstration screens. Shared controls live in `src/components/ui.tsx`.
 
-The lockfile records the existing dependencies; no new packages were added. `npm ci` is the repeatable install command; use `npm install` only when intentionally updating dependency inputs. Node 22.19.0 / npm 10.9.3 was used for this Windows check. Development and preview servers bind to `127.0.0.1` by default. System font fallbacks keep the preview independent of a remote font service.
+One login component in `src/pages/Auth.tsx` serves both modes. The default `VITE_DATA_MODE=demo` makes no API requests. The API tab shows its unavailable state in this build; it never substitutes mock success for a failed sign-in.
 
-`npm test` compiles focused workflow tests and runs Node's built-in test runner. Output goes into ignored `.test-dist/`. No additional test dependency is needed.
+`src/api`, `src/hooks.ts`, `src/app/ApiWorkspace.tsx`, and the existing API pages in `src/pages` are retained as a **future integration adapter**. They are not live-tested or clinic-approved. Do not set `VITE_DATA_MODE=api` for clinical use. Read [the integration boundary](docs/BACKEND_INTEGRATION.md) before any approved staging trial. Never place secrets in `VITE_*` values.
 
-For a local browser smoke check, start `npm run dev` in one terminal, then run this in another:
+The backend repository previously supplied by the owner uses Fiber at the inspected revision; the master prompt describes a future Gin backend. Frontend code must follow approved HTTP contracts, not assume those frameworks expose identical endpoints.
 
-```powershell
-node scripts/browser-check.mjs
-```
+## Hosting
 
-This uses an already installed Chrome or Edge in headless mode. Set `$env:SPARTIAL_BROWSER` to another installed Chromium executable if necessary. The script only accepts a localhost URL, uses a separate ignored `.qa-browser/` profile, closes the browser it starts, and writes synthetic screenshots and a check report under `docs/`. It does not install a browser or any package. Browser launch may require permission in a restricted agent environment. Stop the dev server with Ctrl+C afterward.
+No deployment was performed. A static server can serve the generated `dist` directory after a verified build. Hash routes do not require server rewrites for individual pages. `npm run preview` is a local review server, not production hosting. Do not expose this demonstration as a clinical records system or enter real patient information.
 
-Shared controls are in `src/components/ui.tsx`; the registration, booking and walk-in forms are in `src/components/WorkflowForms.tsx`. `src/workflows.ts` contains the testable local validation and provisional action rules. All records still live in React state: there is no localStorage, database, session or Go API adapter.
+No dependencies were added or version ranges changed. The existing [dependency audit](docs/DEPENDENCY_AUDIT.md) records four unresolved high-severity development-tool findings from the earlier audit. A successful install/build is not a clean security assessment.
 
-## Try the synthetic walk-in flow
-
-1. Enter the Reception or Administrator preview.
-2. Open **Patient Queue → Add demo walk-in**, or open a patient preview and choose **Check in demo walk-in**.
-3. Select a registered fictional patient and sample visit type, then check in. The visit starts in Waiting with a synthetic visit ID and the current East Africa Time. No appointment is created.
-4. If the patient already has an active visit today, the form shows that visit and provides a queue review action. It does not create a duplicate or merge visits.
-
-The queue labels each arrival as Appointment or Walk-in. Walk-ins use the same provisional nurse/doctor handoffs. Completing one leaves existing appointments unchanged. All changes disappear on refresh. Visit types, roles and production behavior still need clinic approval.
-
-See [frontend review](docs/FRONTEND_REVIEW.md) for actual results, limitations, screenshots and the next task.
-The latest continuation is documented in [walk-in review](docs/WALK_IN_REVIEW.md).
-
-If installation reports audit warnings, see the [dependency audit review](docs/DEPENDENCY_AUDIT.md) for the verified findings and remediation status as of 18 November 2026. An install completing successfully does not imply a clean audit.
+See [the task tracker](FRONTEND_TODO.md) and [the UI blueprint](UI_UX_BLUEPRINT.md). Clinical field approval, role policy acceptance, final browser regression tests, assistive-technology review and backend integration remain outstanding.

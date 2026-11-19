@@ -10,7 +10,10 @@ export function demographics(form: HTMLFormElement): Demographics {
 export function validateDemographics(value: Demographics, today: string): string {
   if (!value.given_name || !value.family_name) return 'Enter the patient’s given and family names.'
   if (value.given_name.length>100 || value.family_name.length>100) return 'Names must be 100 characters or fewer.'
-  if (value.birth_precision==='exact' && (!value.birth_date || !/^\d{4}-\d{2}-\d{2}$/.test(value.birth_date) || value.birth_date>today)) return 'Enter a valid birth date that is not in the future.'
+  if (value.birth_precision==='exact') {
+    const date=value.birth_date||'',parsed=new Date(`${date}T00:00:00Z`)
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(parsed.getTime())||parsed.toISOString().slice(0,10)!==date||date>today)return 'Enter a valid birth date that is not in the future.'
+  }
   if (value.birth_precision==='year' && (!Number.isInteger(value.birth_year) || value.birth_year!<1900 || value.birth_year!>Number(today.slice(0,4)))) return 'Enter a birth year from 1900 through the current year.'
   return ''
 }

@@ -1,0 +1,99 @@
+.terminal-landing {
+  min-height: 100dvh;
+  background: #f8f6f4;
+  color: #24364c;
+  font-family: Inter, 'Segoe UI', system-ui, sans-serif;
+}
+
+.terminal-landing :where(button, a):focus-visible {
+  outline: 3px solid #003db8;
+  outline-offset: 4px;
+}
+
+.terminal-header {
+  background: #fff;
+  border-bottom: 1px solid #e8e6e3;
+}
+
+.terminal-header-inner {
+  max-width: 1424px;
+  min-height: 104px;
+  margin: 0 auto;
+  padding: 12px 32px;
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr) 180px;
+  align-items: center;
+  gap: 24px;
+}
+
+.terminal-logo { display: block; width: 154px; height: 76px; object-fit: contain; }
+.terminal-heading { text-align: center; }
+.terminal-heading h1 { margin: 0 0 7px; font: 700 27px/1.25 Inter, 'Segoe UI', system-ui, sans-serif; letter-spacing: -.7px; color: #243349; }
+.terminal-heading p { margin: 0; color: #657185; font-size: 12px; line-height: 1.5; }
+.terminal-sign-in { justify-self: end; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 10px 13px; border: 1px solid #dce4ef; border-radius: 5px; background: #fff; color: #003db8; font-size: 12px; font-weight: 600; }
+.terminal-sign-in:hover { background: #f3f7ff; border-color: #b6c9ee; }
+.terminal-main { max-width: 1424px; margin: 0 auto; padding: 28px 32px 18px; }
+.terminal-main:focus, .terminal-grid:focus { outline: none; }
+.terminal-intro { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+.terminal-intro > p { margin: 0; color: #647084; font-size: 13px; }
+.terminal-demo-badge { display: inline-flex; align-items: center; gap: 7px; padding: 6px 10px; border: 1px solid #d4e5dc; border-radius: 4px; color: #17643c; background: #f1f8f4; font-size: 11px; font-weight: 600; }
+.terminal-demo-badge > span { width: 6px; height: 6px; border-radius: 50%; background: #00872a; }
+.terminal-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.terminal-card { display: flex; min-width: 0; min-height: 172px; overflow: hidden; background: #fff; border: 1px solid #eeece9; border-radius: 3px; box-shadow: 0 3px 14px #23314304; }
+.terminal-card:focus-within { border-color: #a5bce8; }
+.terminal-photo { flex: 0 0 33%; min-width: 0; background-color: #e7edf2; background-image: url('/terminal-images/healthcare-atlas.png'); background-size: 300% 400%; background-position: var(--photo-x) var(--photo-y); }
+.terminal-card:nth-child(3n + 2) .terminal-photo { order: 2; }
+.terminal-card-content { min-width: 0; flex: 1; display: flex; flex-direction: column; }
+.terminal-card-content h2 { margin: 0; padding: 15px 13px 12px; border-bottom: 1px solid #f0f1f3; font: 600 11px/1.5 Inter, 'Segoe UI', system-ui, sans-serif; text-transform: uppercase; letter-spacing: .25px; color: #334761; }
+.terminal-card-content > p { flex: 1; margin: 0; padding: 12px 13px; color: #52627a; font-size: 11.5px; line-height: 1.65; }
+.terminal-card-footer { display: flex; align-items: flex-start; justify-content: flex-start; flex-wrap: wrap; gap: 7px; padding: 10px 13px 12px; border-top: 1px solid #f1f2f4; }
+.terminal-open { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 30px; max-width: 100%; padding: 7px 9px; border: 1px solid #003db8; border-radius: 3px; background: #003db8; color: #fff; font-size: 10px; line-height: 1.4; font-weight: 500; text-align: left; }
+.terminal-open:hover { background: #002f91; border-color: #002f91; }
+.terminal-pending { color: #68758a; font-size: 9px; line-height: 1.5; align-self: center; }
+.terminal-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 27px 0 6px; color: #7a8390; font-size: 11px; line-height: 1.6; }
+.terminal-footer > span { font-weight: 500; color: #5a6a7e; }
+.terminal-footer p { margin: 0; }
+.terminal-pending-dialog > .button { align-self: flex-start; }
+.terminal-back { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 4px; margin-bottom: 20px; border: 0; background: transparent; color: #003db8; font-size: 13px; }
+
+@media (max-width: 1100px) {
+  .terminal-grid { gap: 15px; }
+  .terminal-header-inner, .terminal-main { padding-inline: 24px; }
+  .terminal-card { min-height: 174px; }
+  .terminal-card-content h2 { font-size: 10.5px; }
+  .terminal-card-content > p { font-size: 11px; }
+  .terminal-card-footer { padding-inline: 10px; }
+  .terminal-open { font-size: 9.5px; }
+}
+
+@media (max-width: 900px) {
+  .terminal-header-inner { grid-template-columns: 140px minmax(0, 1fr) 140px; gap: 12px; }
+  .terminal-logo { width: 132px; }
+  .terminal-heading h1 { font-size: 22px; }
+  .terminal-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .terminal-card-content h2 { font-size: 11.5px; }
+  .terminal-card-content > p { font-size: 12px; }
+  .terminal-open { min-height: 36px; font-size: 10.5px; }
+}
+
+@media (max-width: 600px) {
+  .terminal-header-inner { grid-template-columns: 1fr auto; padding: 12px 18px 20px; row-gap: 10px; }
+  .terminal-logo { width: 140px; height: 72px; }
+  .terminal-heading { grid-column: 1 / -1; grid-row: 2; }
+  .terminal-heading h1 { font-size: 23px; }
+  .terminal-sign-in { grid-column: 2; grid-row: 1; font-size: 11px; min-height: 44px; }
+  .terminal-main { padding: 22px 16px 18px; }
+  .terminal-intro { margin-bottom: 17px; }
+  .terminal-intro > p { font-size: 12px; }
+  .terminal-grid { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .terminal-card { min-height: 178px; }
+  .terminal-card-content h2 { padding-block: 12px; font-size: 11px; }
+  .terminal-card-content > p { padding-block: 11px; }
+  .terminal-open { min-height: 40px; }
+  .terminal-footer { display: block; text-align: center; padding-top: 24px; font-size: 10px; }
+  .terminal-footer p { margin-top: 4px; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .terminal-open, .terminal-sign-in { transition: background-color 120ms ease, border-color 120ms ease; }
+}

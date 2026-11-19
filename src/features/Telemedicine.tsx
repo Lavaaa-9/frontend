@@ -1,0 +1,9 @@
+import { useState } from 'react'
+import type { Appointment } from '../mockData'
+import { DataTable, EmptyState, Modal, PageHeader, Status } from '../components/ui'
+
+export function Telemedicine({appointments,book}:{appointments:Appointment[];book:()=>void}) {
+  const rows=appointments.filter(a=>a.reason==='Telemedicine consultation')
+  const [selected,setSelected]=useState<Appointment|null>(null)
+  return <><PageHeader title="Telemedicine" eyebrow="REMOTE CARE DESIGN" description="Synthetic session scheduling. No video provider or live calling is connected." action={<button className="button primary" onClick={book}>Schedule demo session</button>}/><section className="surface-card core-card">{rows.length?<DataTable caption="Demo remote consultations" rows={rows} rowKey={r=>r.id} columns={[{id:'time',label:'Date / time (EAT)',render:r=>`${r.date} ${r.time}`},{id:'patient',label:'Patient',render:r=>r.patientName},{id:'doctor',label:'Doctor',render:r=>r.provider},{id:'status',label:'Status',render:r=><Status value={r.status}/>},{id:'open',label:'Session',render:r=><button className="table-action" onClick={()=>setSelected(r)}>View session design</button>}]}/>:<EmptyState title="No remote sessions" description="Create an appointment with visit type Telemedicine consultation."/>}</section>{selected&&<Modal title="Remote consultation design" subtitle={`${selected.patientName} · ${selected.date} ${selected.time} EAT`} close={()=>setSelected(null)}><div className="modal-form"><div className="video-placeholder"><span>Video provider not connected</span><p>Camera, microphone and patient conversations are not accessed.</p></div><p>Provider: {selected.provider}</p><p>An approved video provider, identity checks and clinical contracts are required before this interface can start a session.</p><button className="button outline" onClick={()=>setSelected(null)}>Close session design</button></div></Modal>}</>
+}

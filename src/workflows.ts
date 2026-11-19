@@ -1,6 +1,6 @@
 import type { Appointment, Patient, QueueEntry, Role } from './mockData.js'
 
-export const staffRoles: Role[] = ['Administrator', 'Reception', 'Nurse', 'Doctor', 'Laboratory', 'Cashier']
+export const staffRoles: Role[] = ['Administrator', 'Reception', 'Nurse', 'Doctor', 'Laboratory', 'Pharmacy', 'Cashier', 'Management']
 export const canRegister = (role: Role) => role === 'Reception' || role === 'Administrator'
 export const canBook = (role: Role) => ['Administrator', 'Reception', 'Doctor', 'Nurse'].includes(role)
 export const canAdvance = (role: Role, stage: QueueEntry['stage']) => role === 'Administrator' ||
