@@ -1,16 +1,18 @@
-# Frontend implementation status
+# Frontend audit and preparation status
 
-The master development prompt is the current scope: synthetic frontend first; backend integration deferred. No stage is accepted merely because its source compiles.
+## Audit
 
-| Stage | Implemented in source | Verification / remaining work |
-| --- | --- | --- |
-| 1. Stability and architecture | Restored shared UI compatibility; in-memory repository; hash navigation and 404; shared form/table/dialog/error controls | Latest full TypeScript check passes. Detail routes and further component extraction remain. |
-| 2. Login and dashboard | One login, labelled demo/API modes, unavailable API state, role navigation, derived counts and local activity | Browser run covered the login and original dashboard before the final dashboard changes. Final visual rerun declined. |
-| 3. Reception | Registration, edit/contact fields, clinic card, duplicate warning, appointment booking/reschedule/day agenda, check-in and walk-ins | Existing unit tests pass. Browser runs found route-lifecycle regressions; code fixes await rerun. Documents are fictional plain text in memory. |
-| 4. Clinical design | Nursing/consultation drafts, visit-linked sample lab and prescription requests, result and dispensing simulations | Pure consultation rules tested. New form journey and accessibility checks await browser execution and clinic field approval. No clinical acceptance. |
-| 5. Operations | Demo billing, receipt/CSV, reports, staff/departments/settings/reset, account and telemedicine design | Billing arithmetic tested. Screens, printing, downloads and mobile layouts require final browser checks. No live services. |
-| 6. Quality assurance | 32 unit tests; expanded browser script; QA and integration documentation | Latest production build rerun and browser rerun were declined. Codacy tools unavailable. No production readiness claim. |
+No `AGENTS.md` or `PHASES.md` was present in the supplied workspace. The original default entry (`src/App.tsx`) mounted the synthetic demo and included role selection, locally generated identifiers, dashboard counts, patient registration, appointments and queue changes. `src/mockData.ts` contains fictional patients, appointments and queue fixtures. `src/demo/repository.ts` and `src/demo/operations.ts` contain in-memory data and simulated staff, clinical and billing transactions. `src/features/Clinical.tsx`, `Operations.tsx`, `Account.tsx`, `PatientCard.tsx`, `Telemedicine.tsx`, `TerminalLanding.tsx`, `terminalData.ts`, `src/components/WorkflowForms.tsx`, `src/workflows.ts` and demo-only parts of `src/components/ui.tsx` supported those screens. These files are retained for reference and legacy synthetic tests but are not mounted by the current entry point. Git history contains the former app.
 
-Next small task: run the current browser script with permission, fix any remaining route/focus issues, verify the new synthetic clinical-to-billing journey and capture current desktop/mobile screenshots. Then review clinical fields and the provisional role matrix with authorised clinic staff.
+The separate `src/api`, `src/hooks.ts`, `src/pages` and `src/app/ApiWorkspace.tsx` adapter targets an older backend contract. `sessionStorage` in `src/hooks.ts` stores only a non-medical lock flag; no medical records or passwords were found in browser storage. No automatic API-to-demo fallback was found. `src/components/ErrorBoundary.tsx` contained demo-specific messaging, now replaced. The prior screenshots and browser script represent the demo and must not be treated as current QA.
 
-Additional work: separate URLs for all detail panels; genuine staff assignments/care scope; approved medical history, document formats and result verification; line-item invoices/taxes/payment history; calendar month/week views; richer reports; real password recovery and staging contract tests. These are not represented as completed features.
+## Completed preparation
+
+- Removed the synthetic application from the production entry point; closed the legacy backend gate pending a verified contract and CSRF implementation.
+- Prepared sign-in, password visibility, unavailable and recovery guidance, error mapping, session-state hooks and permission-aware scaffolding. The existing session and account adapter is unverified and unreachable behind the gate.
+- Added routes for the requested modules. Unimplemented areas show an unavailable message after authentication is eventually integrated; they do not create or display records. These placeholders are not complete workflows, forms or API integrations.
+- Documented proposed backend capabilities and security decisions in `docs/BACKEND_INTEGRATION.md`.
+
+## Remaining
+
+Agree the Gin API and security contract; implement CSRF and authentication; integrate each module with typed models and permission rules; provide complete forms, loading, empty and failure states; validate the end-to-end patient journey and every authorization boundary. Move or remove retained demo fixtures when their historical tests are replaced by tests of real integration behavior. Add browser-level tests for login, route protection, registration, appointments, queue and accessibility; legacy synthetic tests do not establish those behaviors. Complete responsive and assistive-technology review, dependency/security review, and authorized staging tests before any clinical deployment. The old browser script must be replaced or updated before use.

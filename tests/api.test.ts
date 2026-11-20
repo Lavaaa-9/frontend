@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { ApiClient, ApiError } from '../src/api/client.js'
+import { signInError } from '../src/api/authErrors.js'
 import { RegistrationKey, validateDemographics } from '../src/validation.js'
 
 const actor={id:'TEST-STAFF',email:'staff@example.invalid',display_name:'Sample Staff',role:'reception',active:true,version:1,facility_ids:['TEST-FACILITY'],permissions:['patients.read'],mfa_verified:false}
@@ -8,6 +9,12 @@ const tokens=(access_token='A')=>({access_token,token_type:'Bearer',expires_in:9
 const json=(body:unknown,status=200)=>Response.json(body,{status})
 const denied=(status=401)=>json({error:{code:'unauthorized',message:'Sign in again',fields:{}}},status)
 const authorization=(init?:RequestInit)=>new Headers(init?.headers).get('Authorization')
+test('sign-in failures distinguish invalid, disabled and unavailable states without displaying server details',()=>{
+  assert.match(signInError(new ApiError(401,'invalid_credentials','private')).message,/username or password/)
+  assert.match(signInError(new ApiError(403,'account_disabled','private')).message,/disabled/)
+  assert.match(signInError(new ApiError(0,'network_error','private')).message,/unavailable/)
+  assert.ok(!signInError(new Error('private')).message.includes('private'))
+})
 test('web login sends cookie credentials and keeps the bearer out of JSON request bodies',async()=>{
   const calls:{url:string;init?:RequestInit}[]=[]
   const client=new ApiClient('/api/v1',async(url,init)=>{calls.push({url,init});return json(url.endsWith('/auth/login')?tokens():actor)})

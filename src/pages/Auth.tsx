@@ -1,16 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { ArrowLeft, Eye, EyeOff, HeartPulse, LockKeyhole } from 'lucide-react'
+import { Eye, EyeOff, HeartPulse, LockKeyhole } from 'lucide-react'
 import { api } from '../api'
+import { signInError } from '../api/authErrors'
 import type { Actor, Challenge, Enrollment, StaffSession } from '../api/types'
 import { Brand, DataTable, EmptyState, ErrorNotice, FormField, Modal, PageHeader, ResourceState } from '../components/ui'
 import { useResource } from '../hooks'
-import { staffRoles } from '../workflows'
-import type { Role } from '../mockData'
 
-export function Login({ onEnter, notice='', connectionError, onDemo, initialRole='Reception', back }: { onEnter?:(actor:Actor)=>void; notice?:string; connectionError?:unknown; onDemo?:(role:Role)=>void; initialRole?:Role; back?:()=>void }) {
-  const [mode,setMode]=useState<'demo'|'api'>(onDemo?'demo':'api'),[role,setRole]=useState<Role>(initialRole),[help,setHelp]=useState(false)
-  const apiEnabled=import.meta.env.VITE_DATA_MODE==='api'
+export function Login({ onEnter, notice='', connectionError, connected = false }: { onEnter:(actor:Actor)=>void; notice?:string; connectionError?:unknown; connected?:boolean }) {
+  const [help,setHelp]=useState(false)
   const [busy,setBusy]=useState(false), [error,setError]=useState<unknown>(null), [show,setShow]=useState(false)
   const [challenge,setChallenge]=useState<Challenge|null>(null), [recovery,setRecovery]=useState(false), [expired,setExpired]=useState(false)
   useEffect(()=>{
@@ -21,32 +19,30 @@ export function Login({ onEnter, notice='', connectionError, onDemo, initialRole
   },[challenge])
   async function submit(event:FormEvent<HTMLFormElement>) {
     event.preventDefault();const form=event.currentTarget,data=new FormData(form)
-    if(mode==='demo'){onDemo?.(role);return}
-    if(!apiEnabled){setError(new Error('API mode is not configured. Use Demo Mode for this frontend review.'));return}
+    if(busy)return
+    if(!connected){setError(new Error('Sign-in is not connected yet. Contact your administrator for assistance.'));return}
     setBusy(true);setError(null)
     try {
       const result=challenge ? await api.verify(challenge.challenge_token,recovery?{recovery_code:String(data.get('factor')).trim()}:{code:String(data.get('factor')).trim()}) : await api.login(String(data.get('email')).trim(),String(data.get('password')))
       if('mfa_required' in result){setChallenge(result);form.reset()}
-      else onEnter?.(result)
-    } catch(reason){setError(reason)} finally {setBusy(false)}
+      else onEnter(result)
+    } catch(reason){setError(signInError(reason))} finally {setBusy(false)}
   }
   return <div className="login-shell"><div className="login-illustration"><Brand/><div className="login-promo">
     <span className="intro-tag"><HeartPulse size={16}/> SPARTIAL STAFF WORKSPACE</span><h1>Care feels better <br/>when everything <br/><em>connects.</em></h1>
     <p>A focused workspace for your clinic team.</p></div><span className="login-bottom">Spartial Specialized Polyclinic</span></div>
     <main className="login-form-column"><div className="login-mobile-brand"><Brand/></div><div className="login-form-card">
-      {back&&<button className="terminal-back" type="button" onClick={back}><ArrowLeft size={16} aria-hidden="true"/>Back to terminals</button>}
-      <div className="login-intro-icon"><LockKeyhole size={25}/></div><div className="eyebrow">HEALTHCARE MANAGEMENT SYSTEM</div><h2>{challenge?'Verify your sign-in':'Welcome back'}</h2><p className="login-subtitle">{challenge?'Enter a code from your authenticator or use an unused recovery code.':mode==='demo'?'Explore the workspace with fictional staff roles.':'Sign in with your staff account to continue.'}</p>
-      {onDemo&&<div className="mode-switch" aria-label="Workspace mode"><button className={mode==='demo'?'active':''} type="button" aria-pressed={mode==='demo'} onClick={()=>{setMode('demo');setError(null)}}>Demo Mode</button><button className={mode==='api'?'active':''} type="button" aria-pressed={mode==='api'} onClick={()=>{setMode('api');setError(null)}}>API Mode</button></div>}
-      {mode==='api'&&!apiEnabled&&<p className="notice">API Mode is disabled in this demo build. Use invented credentials to review validation. No sign-in request is sent.</p>}
+      <div className="login-intro-icon"><LockKeyhole size={25}/></div><div className="eyebrow">HEALTHCARE MANAGEMENT SYSTEM</div><h2>{challenge?'Verify your sign-in':'Welcome back'}</h2><p className="login-subtitle">{challenge?'Enter a code from your authenticator or use an unused recovery code.':'Sign in with your staff account to continue.'}</p>
+      {!connected&&<p className="notice" role="status">Sign-in is not connected yet. Your credentials will not be sent.</p>}
       {notice&&<p className="notice" role="status">{notice}</p>}{expired&&<p role="alert">Verification expired. Sign in again.</p>}<ErrorNotice error={error||connectionError}/>
       <form onSubmit={submit} className="auth-form" key={challenge?'mfa':'login'} aria-busy={busy}>
-        {mode==='demo'?<><FormField id="preview-role" label="Preview staff role"><select id="preview-role" value={role} onChange={event=>setRole(event.target.value as Role)}>{staffRoles.map(r=><option key={r}>{r}</option>)}</select></FormField><p className="notice">Demo Mode uses fictional records in memory. No authentication occurs. Refresh resets changes.</p></>:challenge ? <><FormField id="factor" label={recovery?'Recovery code':'Authenticator code'}><input autoFocus id="factor" name="factor" required autoComplete="one-time-code" inputMode={recovery?'text':'numeric'} pattern={recovery?undefined:'[0-9]{6}'} maxLength={recovery?100:6}/></FormField>
+        {challenge ? <><FormField id="factor" label={recovery?'Recovery code':'Authenticator code'}><input autoFocus id="factor" name="factor" required autoComplete="one-time-code" inputMode={recovery?'text':'numeric'} pattern={recovery?undefined:'[0-9]{6}'} maxLength={recovery?100:6}/></FormField>
           <button type="button" className="inline-button" disabled={busy} onClick={()=>{setRecovery(!recovery);setError(null)}}>{recovery?'Use authenticator code':'Use a recovery code'}</button></> : <>
-          <FormField id="email" label="Staff email"><input autoFocus id="email" name="email" type="email" autoComplete="username" required maxLength={254}/></FormField>
+          <FormField id="email" label="Username or email"><input autoFocus id="email" name="email" type="text" autoComplete="username" required maxLength={254}/></FormField>
           <FormField id="password" label="Password"><div className="password-wrap"><input id="password" name="password" type={show?'text':'password'} autoComplete="current-password" required maxLength={256}/><button type="button" aria-label={show?'Hide password':'Show password'} onClick={()=>setShow(!show)}>{show?<EyeOff size={19}/>:<Eye size={19}/>}</button></div></FormField></>}
-        <button className="button primary login-submit" disabled={busy}>{busy?'Please wait…':mode==='demo'?'Enter demo workspace':challenge?'Verify & sign in':'Sign in'}</button>
+        <button className="button primary login-submit" disabled={busy}>{busy?'Please wait…':challenge?'Verify & sign in':'Sign in'}</button>
         {challenge&&<button type="button" className="button outline" disabled={busy} onClick={()=>{setChallenge(null);setError(null)}}>Back to sign in</button>}
-      </form>{mode==='api'&&<button className="inline-button forgot-link" onClick={()=>setHelp(true)}>Forgot password?</button>}<p className="login-helper">Use fictional data only. API integration and clinic acceptance remain pending.</p>
+      </form><button className="inline-button forgot-link" onClick={()=>setHelp(true)}>Forgot password?</button><p className="login-helper">Contact your administrator for access to your staff account.</p>
     </div></main>{help&&<Modal title="Password assistance" subtitle="Account recovery requires backend support" close={()=>setHelp(false)}><div className="modal-form"><p>Contact your authorised system administrator. No reset email is sent by this frontend.</p><button className="button primary" onClick={()=>setHelp(false)}>Back to sign in</button></div></Modal>}</div>
 }
 

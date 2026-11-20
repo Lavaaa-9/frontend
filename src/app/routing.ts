@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 
 export function parseRoute(hash:string) {
-  const value=hash.startsWith('#/')?hash.slice(2):'terminals'
+  const value=hash.startsWith('#/')?hash.slice(2):'dashboard'
   const [section,detail]=value.split('/').map(part=>{try{return decodeURIComponent(part)}catch{return ''}})
-  return {section:section||'terminals',detail:detail||''}
+  return {section:section||'dashboard',detail:detail||''}
 }
 export function useHashRoute() {
   const [route,setRoute]=useState(()=>parseRoute(location.hash))

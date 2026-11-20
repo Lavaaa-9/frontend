@@ -22,7 +22,7 @@ const LOCK_KEY = 'spartial-session-locked'
 function isLocked() { try { return sessionStorage.getItem(LOCK_KEY) === '1' } catch { return false } }
 function setLocked(locked: boolean) { try { if (locked) sessionStorage.setItem(LOCK_KEY, '1'); else sessionStorage.removeItem(LOCK_KEY) } catch { /* No sensitive data or credentials are stored. */ } }
 
-export function useSession() {
+export function useSession(enabled = true) {
   const [actor, setActor] = useState<Actor | null>(null)
   const [loading, setLoading] = useState(true)
   const [notice, setNotice] = useState('')
@@ -30,6 +30,7 @@ export function useSession() {
   const actorRef = useRef(actor); actorRef.current = actor
   useEffect(() => {
     let current = true
+    if (!enabled) { setLoading(false); return () => { current = false } }
     api.onSessionLost = () => {
       if (!current) return
       if (actorRef.current) setNotice('Your session ended. Sign in again to continue.')
@@ -40,7 +41,7 @@ export function useSession() {
       if (current && (!(error instanceof ApiError) || error.status !== 401)) setConnectionError(error)
     }).finally(() => { if (current) setLoading(false) })
     return () => { current = false; api.onSessionLost = () => {} }
-  }, [])
+  }, [enabled])
   const signedIn = (value: Actor) => { setLocked(false); setConnectionError(null); setNotice(''); setActor(value) }
   const signedOut = (message = 'You have signed out.') => { api.clear(); setLocked(true); setActor(null); setNotice(message) }
   const lock = useCallback(() => {

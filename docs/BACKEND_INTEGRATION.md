@@ -1,34 +1,33 @@
-# Backend boundary — integration deferred
+# Backend integration requirements
 
-The latest master prompt requests a coherent synthetic frontend before connecting a backend. Default mode is `VITE_DATA_MODE=demo`; it mounts the in-memory repository and does not restore sessions, fetch patients or send sign-in requests. Do not connect real patient data during development or QA.
+The application is disconnected. `BACKEND_INTEGRATION_READY` is intentionally false; there is no configuration switch to enable the old adapter. The Go/Gin API and its contracts have not been supplied or verified for this work. The requirements below are proposals for agreement, not claims that endpoints exist.
 
-The owner previously supplied `https://github.com/Lavaaa-9/backend.git`. API preparation was inspected against commit `8ddee1ddc16d58c5fb01cdb2006749ab057e9ec4`, including `api/openapi/openapi.json` and route/service source. That revision uses Go Fiber and PostgreSQL; the master prompt names future Go/Gin. Confirm the intended staging revision and approved OpenAPI contract before enabling the adapter. The reference checkout is no longer needed in this frontend package. No backend was created or modified here.
+The retained adapter was previously prepared against a different Go Fiber backend revision (`8ddee1ddc16d58c5fb01cdb2006749ab057e9ec4`). Its URLs, bearer token model, DTOs and permissions must not be assumed to match the future backend. Review or replace it only after the contract is approved. The present cookie refresh implementation has no agreed CSRF protection and must not be enabled as-is.
 
-## Retained adapter
+## Shared requirements
 
-For a separately approved staging integration, `VITE_DATA_MODE=api` selects the API workspace. `VITE_API_BASE_URL` defaults to `/api/v1`. Prefer same-origin HTTPS with a server-side proxy; never place passwords, signing keys or database credentials in frontend environment variables. Absolute cross-origin URLs also require compatible server CORS and cookie policy. There is no development proxy configured or active backend in this task.
+- Agree an OpenAPI contract, error codes, pagination, versioning, time zones, validation rules and retry semantics. Assign stable server-generated patient and visit identifiers and carry them through every handoff. Avoid client-generated medical record numbers.
+- Serve the frontend and APIs over HTTPS. Agree same-origin or explicitly configured cross-origin CORS and cookie policies. No secrets or database credentials belong in the frontend.
+- Backend authorization must check identity, role, permission, facility and care scope on every request, including file downloads. Specify consistent 401/403 responses and audit sensitive access and changes server-side.
+- Specify secure session cookies (`HttpOnly`, `Secure`, appropriate `SameSite`, limited scope and expiry), session renewal and revocation. Agree and implement CSRF protection for every cookie-authenticated state-changing request, including login, refresh and logout where applicable; verify the design against the actual browser deployment topology. Do not rely on CORS or the frontend gate as authorization.
+- Define idempotency and concurrency behavior for registration and all high-impact mutations. Handle ambiguous network failures without claiming success or silently repeating a clinical transaction.
+- Keep patient records out of browser storage, logs and screenshots. Use authorized APIs for medical documents. Specify retention and cache controls with the backend and hosting teams.
 
-The adapter implements the inspected HTTP shapes, not a new proposed backend:
+## Required capabilities
 
-| Area | Existing adapter requests |
+| Area | Backend contract to agree |
 | --- | --- |
-| Identity | `/auth/login`, `/auth/mfa/verify`, `/auth/refresh`, `/auth/me`, `/auth/logout` |
-| Account | `/auth/password`, `/auth/sessions`, session revocation, MFA enrolment/confirmation |
-| Facilities | GET/POST `/staff/facilities` |
-| Staff | GET/POST `/staff/users`, PUT `/staff/users/{id}` |
-| Registration | GET/POST `/staff/patients`, GET/PUT `/staff/patients/{id}` |
-| Audit | GET `/staff/audit` |
+| Authentication and account | Username/email sign-in, disabled and invalid account responses, session restore/expiry/revocation, logout, CSRF, password recovery, profile, password and MFA lifecycle, permissions and facility scope. |
+| Dashboard and reports | Permission-scoped metrics and summaries, definitions, date filters and export access. |
+| Patients and reception | Patient search, registration and updates, duplicate review, demographics, encounter creation for walk-ins and appointments, identifier and version rules. |
+| Appointments and queue | Scheduling, rescheduling, cancellation, check-in, visit state transitions, conflict and concurrency rules, patient and visit IDs. |
+| Nursing and consultations | Authorized triage, observations, clinical notes, drafts, completion, follow-up, validation, handoff and audit rules. |
+| Laboratory and pharmacy | Orders linked to visits, status, result verification, dispensing, stock and access rules. |
+| Billing | Authorized invoices, line items, currency, payments, reversals, receipt and transaction idempotency. |
+| Telemedicine | Scheduling, consent, secure session provisioning, participant authorization and connection lifecycle. |
+| Administration | Staff, facilities, roles, permission assignments, approval workflow and audit access. |
+| Documents | Authorized upload/download, type and size limits, malware scanning, retention and audit policy. |
 
-Access tokens remain in memory. Browser refresh uses the backend's HttpOnly cookie with `credentials: include`. Refresh is serialized and an ambiguous network failure is not automatically retried. A boolean tab-lock marker contains no credentials. Protected page visibility comes from `/auth/me` permissions; server-side authorisation is still required for every record and mutation. The adapter hides records on an idle lock; it cannot guarantee remote revocation when offline.
+## Before opening the integration gate
 
-Patient creation uses an idempotency key retained for retries of an unchanged payload while the form/repository instance remains alive. A page reload discards it; after an ambiguous outcome, search the server before registering again. Updates send the server's version. Conflicts retain form entries and ask the reviewer to reopen the current record. Birth precision supports exact date, year only or unknown without inventing a date.
-
-The inspected backend has no approved department, patient document, next-of-kin, medical-history, appointment, queue, clinical, pharmacy, billing, reporting or video contract matching these demo screens. Demo data models deliberately differ from API DTOs. Do not submit their extra fields to strict JSON endpoints. Do not invent routes or silently fall back from API errors to demo records.
-
-Administrator grants require the backend's independent approval flow; the ordinary staff form cannot grant them. Password recovery mail, broader MFA lifecycle and clinical care-scope workflows need additional approved integration work. Demo duplicate-name checks and the API form's limited name search are not comprehensive identity resolution or record merging.
-
-## Before any staging acceptance
-
-Confirm API revision, deployment origin, TLS/cookie/proxy settings and test accounts through the authorised project lead. Exercise inactive accounts, MFA challenges, session rotation/logout/password change, staff version conflicts, facility scope, patient idempotency/conflicts and denied record access against a running backend using synthetic fixtures. Validate audit persistence in that backend. Unit mocks do not prove authentication, patient-record security or durable auditing.
-
-No live backend integration, database migration, real document upload, production deployment or clinical acceptance was performed.
+Implement the approved client and typed models, CSRF and server enforcement; replace any incompatible legacy calls and permission names. Provide real loading, empty and error states and validated, duplicate-safe forms for each integrated feature. Exercise sign-in, disabled accounts, expired sessions, 401/403, logout, CSRF rejection, patient registration and every handoff against an authorized staging backend with synthetic data. Verify accessibility, responsiveness and clinical workflows with the clinic. Document results and residual risks; do not claim production readiness or compliance without independent review.
