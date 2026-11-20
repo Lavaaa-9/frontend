@@ -8,11 +8,11 @@ The separate `src/api`, `src/hooks.ts`, `src/pages` and `src/app/ApiWorkspace.ts
 
 ## Completed preparation
 
-- Removed the synthetic application from the production entry point; closed the legacy backend gate pending a verified contract and CSRF implementation.
-- Prepared sign-in, password visibility, unavailable and recovery guidance, error mapping, session-state hooks and permission-aware scaffolding. The existing session and account adapter is unverified and unreachable behind the gate.
-- Added routes for the requested modules. Unimplemented areas show an unavailable message after authentication is eventually integrated; they do not create or display records. These placeholders are not complete workflows, forms or API integrations.
+- Removed the synthetic application from the production entry point. Production remains gated; explicit development-only opt-in is available for isolated integration testing.
+- Prepared sign-in, password visibility, unavailable and recovery guidance, error mapping, session-state hooks and permission-aware scaffolding. The session and account adapter is unverified and available only through the development opt-in.
+- Added routes for the requested modules and development-only read views for appointments and the active queue. The views are not live-tested; booking, check-in and status changes remain unavailable. Other unimplemented areas show an unavailable message.
 - Documented proposed backend capabilities and security decisions in `docs/BACKEND_INTEGRATION.md`.
 
 ## Remaining
 
-Agree the Gin API and security contract; implement CSRF and authentication; integrate each module with typed models and permission rules; provide complete forms, loading, empty and failure states; validate the end-to-end patient journey and every authorization boundary. Move or remove retained demo fixtures when their historical tests are replaced by tests of real integration behavior. Add browser-level tests for login, route protection, registration, appointments, queue and accessibility; legacy synthetic tests do not establish those behaviors. Complete responsive and assistive-technology review, dependency/security review, and authorized staging tests before any clinical deployment. The old browser script must be replaced or updated before use.
+Verify the supplied Fiber API and browser security behavior against an isolated backend; integrate each module with typed models and permission rules; provide complete forms, loading, empty and failure states; validate the end-to-end patient journey and every authorization boundary. Move or remove retained demo fixtures when their historical tests are replaced by tests of real integration behavior. Add browser-level tests for login, route protection, registration, appointments, queue and accessibility; legacy synthetic tests do not establish those behaviors. Complete responsive and assistive-technology review, dependency/security review, and authorized staging tests before any clinical deployment. The old browser script must be replaced or updated before use.

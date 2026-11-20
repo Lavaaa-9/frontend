@@ -1,4 +1,4 @@
-import type { Demographics } from './api/types.js'
+import type { Demographics, Patient } from './api/types.js'
 
 export function demographics(form: HTMLFormElement): Demographics {
   const data = new FormData(form)
@@ -17,11 +17,19 @@ export function validateDemographics(value: Demographics, today: string): string
   if (value.birth_precision==='year' && (!Number.isInteger(value.birth_year) || value.birth_year!<1900 || value.birth_year!>Number(today.slice(0,4)))) return 'Enter a birth year from 1900 through the current year.'
   return ''
 }
+// PUT replaces all demographics. Preserve fields not edited in this form.
+export function patientUpdate(patient: Patient, edited: Demographics) {
+  const { middle_name, preferred_name, region, district, ward, sex, marital_status,
+    occupation, nationality, preferred_language, blood_group } = patient
+  return { middle_name, preferred_name, region, district, ward, sex, marital_status,
+    occupation, nationality, preferred_language, blood_group, ...edited, version: patient.version }
+}
 /** Retain the key for an unchanged payload, including after an ambiguous network failure. */
 export class RegistrationKey {
   private payload = ''
   private key = ''
   constructor(private generate: () => string = () => crypto.randomUUID()) {}
+  reset() { this.payload = ''; this.key = '' }
   forPayload(value: unknown) {
     const payload = JSON.stringify(value)
     if (payload!==this.payload || !this.key) {this.payload=payload;this.key=this.generate()}

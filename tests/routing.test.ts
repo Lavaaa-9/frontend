@@ -11,13 +11,15 @@ test('hash routes preserve direct links and open the dashboard by default',()=>{
 test('protected module navigation requires the permission returned by the server',()=>{
   const patients=findModule('patients')!
   assert.equal(mayOpenModule(patients,[]),false)
-  assert.equal(mayOpenModule(patients,['patients.write']),false)
-  assert.equal(mayOpenModule(patients,['patients.read']),true)
+  assert.equal(mayOpenModule(patients,['patient.create']),false)
+  assert.equal(mayOpenModule(patients,['patient.read']),true)
+  assert.equal(mayOpenModule(findModule('appointments')!,['appointment.manage']),true)
+  assert.equal(mayOpenModule(findModule('queue')!,['patient.read']),false)
 })
 test('unknown routes survive parsing for the 404 page and malformed encoding cannot crash navigation',()=>{assert.equal(parseRoute('#/unknown').section,'unknown');assert.equal(parseRoute('#/patients/%E0%A4%A').detail,'')})
 test('requested module routes exist without claiming unapproved clinical permissions',()=>{
   for(const id of ['dashboard','patients','reception','appointments','queue','triage','consultations','laboratory','pharmacy','billing','telemedicine','reports','team','settings','account']) assert.ok(findModule(id),id)
   assert.equal(new Set(modules.map(module=>module.id)).size,modules.length)
-  assert.equal(findModule('appointments')?.connected,undefined)
-  assert.equal(findModule('patients')?.permission,'patients.read')
+  assert.equal(findModule('appointments')?.connected,true)
+  assert.equal(findModule('patients')?.permission,'patient.read')
 })

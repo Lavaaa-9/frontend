@@ -38,7 +38,7 @@ export function Login({ onEnter, notice='', connectionError, connected = false }
       <form onSubmit={submit} className="auth-form" key={challenge?'mfa':'login'} aria-busy={busy}>
         {challenge ? <><FormField id="factor" label={recovery?'Recovery code':'Authenticator code'}><input autoFocus id="factor" name="factor" required autoComplete="one-time-code" inputMode={recovery?'text':'numeric'} pattern={recovery?undefined:'[0-9]{6}'} maxLength={recovery?100:6}/></FormField>
           <button type="button" className="inline-button" disabled={busy} onClick={()=>{setRecovery(!recovery);setError(null)}}>{recovery?'Use authenticator code':'Use a recovery code'}</button></> : <>
-          <FormField id="email" label="Username or email"><input autoFocus id="email" name="email" type="text" autoComplete="username" required maxLength={254}/></FormField>
+          <FormField id="email" label="Staff email"><input autoFocus id="email" name="email" type="email" autoComplete="username" required maxLength={254}/></FormField>
           <FormField id="password" label="Password"><div className="password-wrap"><input id="password" name="password" type={show?'text':'password'} autoComplete="current-password" required maxLength={256}/><button type="button" aria-label={show?'Hide password':'Show password'} onClick={()=>setShow(!show)}>{show?<EyeOff size={19}/>:<Eye size={19}/>}</button></div></FormField></>}
         <button className="button primary login-submit" disabled={busy}>{busy?'Please wait…':challenge?'Verify & sign in':'Sign in'}</button>
         {challenge&&<button type="button" className="button outline" disabled={busy} onClick={()=>{setChallenge(null);setError(null)}}>Back to sign in</button>}

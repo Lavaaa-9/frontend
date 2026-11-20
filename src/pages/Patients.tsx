@@ -7,7 +7,7 @@ import { birthLabel, can, clinicDate, patientName } from '../api/types'
 import type { Actor, Facility, Page, Patient } from '../api/types'
 import { DataTable, EmptyState, ErrorNotice, FormField, Modal, PageHeader, ResourceState } from '../components/ui'
 import { useResource } from '../hooks'
-import { demographics, RegistrationKey, validateDemographics } from '../validation'
+import { demographics, patientUpdate, RegistrationKey, validateDemographics } from '../validation'
 
 export function Patients({actor,security}:{actor:Actor;security:()=>void}) {
   const [search,setSearch]=useState(''),[query,setQuery]=useState(''),[cursor,setCursor]=useState('')
@@ -15,8 +15,8 @@ export function Patients({actor,security}:{actor:Actor;security:()=>void}) {
   const registrationKey=useRef(new RegistrationKey())
   useEffect(()=>{const timer=setTimeout(()=>{setQuery(search.trim());setCursor('')},300);return()=>clearTimeout(timer)},[search])
   const list=useResource(useCallback(signal=>api.request<Page<Patient>>(`/staff/patients?${new URLSearchParams({q:query,cursor,limit:'25'})}`,{signal}),[query,cursor]))
-  function saved(patient:Patient){setRegistration(false);setNotice('Patient saved.');setSelected(patient.id);list.retry()}
-  return <><PageHeader title="Patients" eyebrow="PATIENT DIRECTORY" description="Search authorised patient records and maintain registration details." action={can(actor,'patients.write')&&<button className="button primary" onClick={()=>setRegistration(true)}><Plus size={17}/>Register patient</button>}/>
+  function saved(patient:Patient){registrationKey.current.reset();setRegistration(false);setNotice('Patient saved.');setSelected(patient.id);list.retry()}
+  return <><PageHeader title="Patients" eyebrow="PATIENT DIRECTORY" description="Search authorised patient records and maintain registration details." action={can(actor,'patient.create')&&<button className="button primary" onClick={()=>setRegistration(true)}><Plus size={17}/>Register patient</button>}/>
     {notice&&<p className="notice success" role="status">{notice}</p>}
     <section className="surface-card core-card"><div className="listing-heading"><div><h2>Patient directory</h2><p>Search by name, phone or medical record number.</p></div><div className="search-input"><Search size={18}/><label className="sr-only" htmlFor="patient-search">Search patients</label><input id="patient-search" value={search} onChange={event=>setSearch(event.target.value)} maxLength={100} placeholder="Name, phone or MRN" autoComplete="off"/></div></div>
       <ResourceState {...list} security={security}>{list.data?.items.length?<><DataTable caption="Patients" rows={list.data.items} rowKey={row=>row.id} columns={[
@@ -37,7 +37,7 @@ function PatientProfile({id,actor,close,changed,security}:{id:string;actor:Actor
   return <Modal title="Patient profile" subtitle="Patient registration details" close={close}><div className="modal-form"><ResourceState {...patient} security={()=>{close();security()}}>{patient.data&&<>
     <div><h3>{patientName(patient.data)}</h3><p className="mono">{patient.data.mrn}</p></div><dl className="details"><dt>Birth details</dt><dd>{birthLabel(patient.data)}</dd><dt>Phone</dt><dd>{patient.data.phone||'Not recorded'}</dd><dt>Address</dt><dd>{patient.data.address||'Not recorded'}</dd><dt>Facility ID</dt><dd>{patient.data.facility_id}</dd></dl>
     <div className="unavailable-note"><h3>Additional patient information</h3><p>Next of kin, medical history and patient documents are unavailable until their backend contracts are supplied.</p></div>
-    {can(actor,'patients.write')&&<button className="button primary" onClick={()=>setEditing(true)}>Edit registration details</button>}
+    {can(actor,'patient.update')&&<button className="button primary" onClick={()=>setEditing(true)}>Edit registration details</button>}
   </>}</ResourceState></div></Modal>
 }
 
@@ -60,7 +60,7 @@ function PatientForm({actor,patient,close,saved,registrationKey}:{actor:Actor;pa
     if(!patient && reviewed!==value.family_name){setError(new Error('Review possible matches for this family name before registering.'));return}
     setBusy(true);setError(null)
     try {
-      const body=patient?{...value,version:patient.version}:{...value,facility_id:String(new FormData(event.currentTarget).get('facility_id'))}
+      const body=patient?patientUpdate(patient,value):{...value,facility_id:String(new FormData(event.currentTarget).get('facility_id'))}
       const result=await api.request<Patient>(patient?`/staff/patients/${encodeURIComponent(patient.id)}`:'/staff/patients',{
         method:patient?'PUT':'POST',body,...(!patient?{headers:{'Idempotency-Key':registrationKey.forPayload(body)}}:{}),
       }); saved(result)

@@ -1,8 +1,8 @@
 # Backend integration requirements
 
-The application is disconnected. `BACKEND_INTEGRATION_READY` is intentionally false; there is no configuration switch to enable the old adapter. The Go/Gin API and its contracts have not been supplied or verified for this work. The requirements below are proposals for agreement, not claims that endpoints exist.
+The supplied backend is Fiber v3, with actual route handlers and OpenAPI. The [integration audit](INTEGRATION_AUDIT.md) maps its endpoint families to frontend modules. No live integration has been verified. Production builds keep the integration gate closed; a local development build may explicitly opt in with `VITE_ENABLE_BACKEND=true` against an isolated backend.
 
-The retained adapter was previously prepared against a different Go Fiber backend revision (`8ddee1ddc16d58c5fb01cdb2006749ab057e9ec4`). Its URLs, bearer token model, DTOs and permissions must not be assumed to match the future backend. Review or replace it only after the contract is approved. The present cookie refresh implementation has no agreed CSRF protection and must not be enabled as-is.
+The retained adapter was previously prepared against an earlier Fiber revision. The supplied backend uses an in-memory bearer access token, a rotating HttpOnly Strict refresh cookie, exact Origin checks for browser login, MFA verification, refresh and logout, and bearer authorization on protected routes. These controls require verification with the actual browser deployment, including CSRF, CORS, same-site cookies, proxy and HTTPS settings. Do not assume all old DTOs and permissions match the newer server.
 
 ## Shared requirements
 
@@ -28,6 +28,6 @@ The retained adapter was previously prepared against a different Go Fiber backen
 | Administration | Staff, facilities, roles, permission assignments, approval workflow and audit access. |
 | Documents | Authorized upload/download, type and size limits, malware scanning, retention and audit policy. |
 
-## Before opening the integration gate
+## Before production integration
 
 Implement the approved client and typed models, CSRF and server enforcement; replace any incompatible legacy calls and permission names. Provide real loading, empty and error states and validated, duplicate-safe forms for each integrated feature. Exercise sign-in, disabled accounts, expired sessions, 401/403, logout, CSRF rejection, patient registration and every handoff against an authorized staging backend with synthetic data. Verify accessibility, responsiveness and clinical workflows with the clinic. Document results and residual risks; do not claim production readiness or compliance without independent review.

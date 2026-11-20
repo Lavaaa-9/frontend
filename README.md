@@ -1,6 +1,6 @@
 # Spartial Healthcare Workspace
 
-React, TypeScript and Vite frontend for Spartial Specialized Polyclinic. This is **not a production-ready clinical system**. The application currently displays a staff sign-in interface with authentication disconnected. It does not create a session or send sign-in requests. No patient information should be entered.
+React, TypeScript and Vite frontend for Spartial Specialized Polyclinic. This is **not a production-ready clinical system**. Authentication and patient integration are unverified against a running backend. Use only synthetic data in an isolated development environment.
 
 ## Run and verify
 
@@ -17,9 +17,9 @@ The build runs TypeScript validation before bundling. The existing automated tes
 
 ## Current boundary
 
-`src/App.tsx` mounts the staff workspace instead of the former synthetic demo. The workspace's integration gate is deliberately closed in `src/app/ApiWorkspace.tsx`; setting an environment variable does not open it. The login form explains that it is unavailable, supports password visibility and provides password assistance. Existing backend adapter code and the original demo feature files remain in the repository for review and tests, but the demo is not reachable from the application entry point.
+`src/App.tsx` mounts the staff workspace instead of the former synthetic demo. In development, copying `.env.example` to `.env.local` and explicitly setting `VITE_ENABLE_BACKEND=true` enables the adapter for an isolated test server. Production builds remain gated. The example backend URL is `http://localhost:8080/api/v1`; the frontend uses `http://localhost:3000` to match the supplied backend's default Origin allowlist and Strict cookie policy. Configure both sides consistently, and do not use real patient data. Original demo feature files remain for reference and legacy tests but are not mounted by the entry point.
 
-The retained API adapter was written for an earlier backend revision. It has not been validated against the requested Gin backend and its cookie flows lack an agreed CSRF implementation. Do not enable the gate until the items in [the backend integration requirements](docs/BACKEND_INTEGRATION.md) are complete. The backend must enforce all permissions; frontend checks alone do not secure records.
+The supplied backend uses Fiber and applies an exact Origin check to browser authentication; protected API requests use bearer access tokens and refresh uses an HttpOnly Strict cookie. This mechanism and the deployed cookie/proxy configuration need end-to-end security verification. The frontend's adapter and module permissions must be tested against the current backend; frontend checks alone do not secure records. See [the integration audit](docs/INTEGRATION_AUDIT.md) and [the remaining requirements](docs/BACKEND_INTEGRATION.md).
 
 `VITE_API_BASE_URL` is public configuration only. Do not put credentials, private keys or other secrets in frontend environment variables. Production hosting requires HTTPS and an approved deployment configuration. No deployment or backend changes were made.
 

@@ -1,4 +1,4 @@
-/** Contract: Lavaaa-9/backend, commit 8ddee1d, api/openapi/openapi.json. */
+/** Selected fields from the supplied backend's identity and patient models. */
 export interface StaffUser {
   id: string; email: string; display_name: string; role: string; active: boolean; version: number; facility_ids: string[]
 }
@@ -9,6 +9,9 @@ export interface Facility { id: string; name: string; timezone: string; active: 
 export interface Demographics {
   given_name: string; family_name: string; birth_precision: 'exact' | 'year' | 'unknown'
   birth_date?: string | null; birth_year?: number | null; phone: string; address: string
+  middle_name?: string; preferred_name?: string; region?: string; district?: string; ward?: string
+  sex?: string; marital_status?: string; occupation?: string; nationality?: string
+  preferred_language?: string; blood_group?: string
 }
 export interface Patient extends Demographics {
   id: string; mrn: string; facility_id: string; version: number; created_at: string; updated_at: string

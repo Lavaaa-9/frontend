@@ -2,16 +2,37 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { ApiClient, ApiError } from '../src/api/client.js'
 import { signInError } from '../src/api/authErrors.js'
-import { RegistrationKey, validateDemographics } from '../src/validation.js'
+import { listAppointments, listQueue } from '../src/api/scheduling.js'
+import { patientUpdate, RegistrationKey, validateDemographics } from '../src/validation.js'
 
 const actor={id:'TEST-STAFF',email:'staff@example.invalid',display_name:'Sample Staff',role:'reception',active:true,version:1,facility_ids:['TEST-FACILITY'],permissions:['patients.read'],mfa_verified:false}
 const tokens=(access_token='A')=>({access_token,token_type:'Bearer',expires_in:900,user:actor})
 const json=(body:unknown,status=200)=>Response.json(body,{status})
 const denied=(status=401)=>json({error:{code:'unauthorized',message:'Sign in again',fields:{}}},status)
 const authorization=(init?:RequestInit)=>new Headers(init?.headers).get('Authorization')
+test('scheduling requests use authenticated backend routes and preserve failures',async()=>{
+  const paths:string[]=[]
+  const client=new ApiClient('/api/v1',async url=>{
+    paths.push(url)
+    if(url.endsWith('/auth/login'))return json(tokens())
+    if(url.endsWith('/auth/me'))return json(actor)
+    if(url.includes('/staff/appointments'))return json({items:[],next_cursor:''})
+    return denied(403)
+  })
+  await client.login(actor.email,'invented')
+  assert.deepEqual(await listAppointments(client,''),{items:[],next_cursor:''})
+  assert.ok(paths.some(path=>path==='/api/v1/staff/appointments?limit=25'))
+  await assert.rejects(listQueue(client),error=>error instanceof ApiError && error.status===403)
+})
+test('scheduling rejects malformed backend list responses',async()=>{
+  const client=new ApiClient('/api',async url=>json(url.endsWith('/auth/login')?tokens():url.endsWith('/auth/me')?actor:{items:null}))
+  await client.login(actor.email,'invented')
+  await assert.rejects(listQueue(client),/unexpected response/)
+})
 test('sign-in failures distinguish invalid, disabled and unavailable states without displaying server details',()=>{
   assert.match(signInError(new ApiError(401,'invalid_credentials','private')).message,/username or password/)
   assert.match(signInError(new ApiError(403,'account_disabled','private')).message,/disabled/)
+  assert.match(signInError(new ApiError(403,'origin_denied','private')).message,/origin/)
   assert.match(signInError(new ApiError(0,'network_error','private')).message,/unavailable/)
   assert.ok(!signInError(new Error('private')).message.includes('private'))
 })
@@ -70,6 +91,17 @@ test('responses from a cleared session are not delivered to the caller',async()=
 test('registration retry key is stable for unchanged payloads and changes with the payload',()=>{
   let count=0;const key=new RegistrationKey(()=>`test-key-${++count}`)
   assert.equal(key.forPayload({name:'Sample'}),key.forPayload({name:'Sample'}));assert.notEqual(key.forPayload({name:'Other'}),'test-key-1')
+  key.reset();assert.equal(key.forPayload({name:'Other'}),'test-key-3')
+})
+test('patient updates retain unedited demographics and omit server-owned fields',()=>{
+  const patient={id:'test',mrn:'test',facility_id:'test',version:2,created_at:'',updated_at:'',
+    given_name:'A',family_name:'B',phone:'',address:'',birth_precision:'exact' as const,birth_date:'2000-01-01',
+    middle_name:'C',sex:'female',region:'region',blood_group:'O+'}
+  const edited={given_name:'A',family_name:'B',phone:'',address:'changed',birth_precision:'unknown' as const}
+  const body=patientUpdate(patient,edited)
+  assert.equal(body.middle_name,'C');assert.equal(body.sex,'female');assert.equal(body.region,'region');assert.equal(body.blood_group,'O+')
+  assert.equal(body.version,2);assert.equal(body.address,'changed')
+  assert.ok(!('id' in body));assert.ok(!('birth_date' in body))
 })
 test('birth precision validates year and does not require a fabricated date for unknown birth details',()=>{
   const value={given_name:'Sample',family_name:'Person',phone:'',address:'',birth_precision:'unknown' as const}
